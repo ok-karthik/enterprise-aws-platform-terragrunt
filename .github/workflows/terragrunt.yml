@@ -1,0 +1,47 @@
+name: 'Terragrunt CI/CD'
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+permissions:
+  id-token: write # Required for OIDC
+  contents: read
+  pull-requests: write # Required to post plan comments
+
+jobs:
+  terragrunt:
+    name: 'Terragrunt'
+    runs-on: ubuntu-latest
+    env:
+      AWS_REGION: 'ap-south-2' # Change this if you use multiple regions
+    
+    # Use a container with both Terraform and Terragrunt pre-installed
+    container:
+      image: alpine/terragrunt:1.6.6 # Match your Terraform version if possible
+
+    steps:
+      - name: Git Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          # This ARN will be created in the next step!
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Terragrunt Plan DEV
+        if: github.event_name == 'pull_request'
+        id: plan
+        run: |
+          terragrunt run-all plan --terragrunt-non-interactive -out=plan.tfplan
+        continue-on-error: false
+        working-directory: live/dev/ap-south-2
+
+#      - name: Terragrunt Apply
+#        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+#        run: |
+#          terragrunt run-all apply --terragrunt-non-interactive

@@ -1,0 +1,25 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "config:recommended"
+  ],
+  "enabledManagers": [
+    "terragrunt",
+    "terraform",
+    "github-actions"
+  ],
+  "packageRules": [
+    {
+      "matchUpdateTypes": ["minor", "patch"],
+      "matchCurrentVersion": "!/^0/",
+      "automerge": false
+    },
+    {
+      "description": "Group all terraform-aws-modules together",
+      "matchSourceUrlPrefixes": ["https://github.com/terraform-aws-modules/"],
+      "groupName": "terraform-aws-modules"
+    }
+  ],
+  "timezone": "Europe/Berlin",
+  "schedule": ["at any time"]
+}
