@@ -27,12 +27,12 @@ jobs:
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
         with:
-          terraform_version: 1.6.6
+          terraform_version: 1.10.7
 
       - name: Setup Terragrunt
         uses: autero1/action-terragrunt@v3
         with:
-          terragrunt-version: 0.54.0
+          terragrunt-version: 0.73.0
 
       - name: Terraform Cache
         uses: actions/cache@v4
