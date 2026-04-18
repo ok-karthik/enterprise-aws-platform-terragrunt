@@ -12,16 +12,37 @@ permissions:
   pull-requests: write # Required to post plan comments
 
 jobs:
-  terragrunt:
-    name: 'Terragrunt'
+  # 1. Stage: Discovery - Find all Terragrunt modules
+  discover:
+    name: 'Discover Modules'
     runs-on: ubuntu-latest
-    env:
-      AWS_REGION: 'ap-south-2' # Change this if you use multiple regions
-    
-    # Use a container with both Terraform and Terragrunt pre-installed
-    container:
-      image: alpine/terragrunt:1.6.6 # Match your Terraform version if possible
+    outputs:
+      modules: ${{ steps.set-modules.outputs.modules }}
+    steps:
+      - name: Git Checkout
+        uses: actions/checkout@v4
 
+      - name: Find Modules
+        id: set-modules
+        run: |
+          # Find all directories with terragrunt.hcl, excluding cache and hidden dirs
+          MODULE_DIRS=$(find infrastructure-live infrastructure-bootstrap -name "terragrunt.hcl" -not -path "*/.terragrunt-cache/*" | xargs dirname | sort -u | jq -R -s -c 'split("\n")[:-1]')
+          echo "modules=${MODULE_DIRS}" | tee -a "$GITHUB_OUTPUT"
+
+  # 2. Stage: Execution - Run Parallel Plans
+  terragrunt:
+    name: 'Plan: ${{ matrix.module }}'
+    needs: [discover]
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        module: ${{ fromJson(needs.discover.outputs.modules) }}
+    env:
+      AWS_REGION: ${{ vars.AWS_REGION }}
+      AWS_ROLE_ARN: ${{ vars.AWS_ROLE_ARN }}
+      TG_LOG_CUSTOM_FORMAT: "%msg"
+    
     steps:
       - name: Git Checkout
         uses: actions/checkout@v4
@@ -29,30 +50,159 @@ jobs:
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
         with:
-          terraform_version: 1.6.6
+          terraform_version: 1.10.5
 
       - name: Setup Terragrunt
         uses: autero1/action-terragrunt@v3
         with:
-          terragrunt-version: 0.54.0
+          terragrunt-version: 0.73.0
+
+      - name: Install tf-summarize
+        run: |
+          # Use a more reliable way to install tf-summarize into a path that works
+          curl -sL https://github.com/dineshba/tf-summarize/releases/latest/download/tf-summarize_linux_amd64.tar.gz | tar xz
+          mkdir -p $HOME/.local/bin
+          mv tf-summarize $HOME/.local/bin/
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          # This ARN will be created in the next step!
-          role-to-assume: arn:aws:iam::508768430433:role/github-actions-oidc-role
-          #role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          role-to-assume: ${{ env.AWS_ROLE_ARN }}
           aws-region: ${{ env.AWS_REGION }}
 
-      - name: Terragrunt Plan DEV
-        if: github.event_name == 'pull_request'
+      - name: Terragrunt Init & Plan
         id: plan
         run: |
-          terragrunt run-all plan --terragrunt-non-interactive -out=plan.tfplan
-        continue-on-error: false
-        working-directory: live/dev/ap-south-2
+          # Initialize status
+          echo "PENDING" > summary.txt
 
-#      - name: Terragrunt Apply
-#        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-#        run: |
-#          terragrunt run-all apply --terragrunt-non-interactive
+          # 1. Init
+          if ! terragrunt init --non-interactive; then
+            echo "INIT FAILED" > summary.txt
+            exit 1
+          fi
+          
+          # 2. Plan
+          if ! terragrunt plan --non-interactive -no-color -out=tfplan 2>&1 | tee /dev/stderr | sed 's/^.*terraform: //g' > plan_raw.txt; then
+            echo "PLAN FAILED" > summary.txt
+            exit 1
+          fi
+          
+          # 3. Summarize (Standard output)
+          # Capture errors to a separate file to see why EKS might fail
+          if terragrunt show -json tfplan > tfplan.json 2>show_err.txt && \
+             tf-summarize tfplan.json > summary_new.txt 2>sum_err.txt; then
+            mv summary_new.txt summary.txt
+          else
+            echo "SUMMARIZE FAILED (Plan passed)" > summary.txt
+            echo "--- SHOW ERROR ---" >> summary.txt
+            cat show_err.txt >> summary.txt || true
+            echo "--- SUMMARIZE ERROR ---" >> summary.txt
+            cat sum_err.txt >> summary.txt || true
+          fi
+        working-directory: ${{ matrix.module }}
+        continue-on-error: true
+
+      - name: Prepare Metadata
+        if: always()
+        run: |
+          echo "${{ matrix.module }}" > ${{ matrix.module }}/metadata.txt
+          # Create a slug for the artifact name (replace slashes with dashes)
+          SLUG=$(echo "${{ matrix.module }}" | sed 's/\//-/g')
+          echo "SLUG=$SLUG" >> $GITHUB_ENV
+
+      - name: Upload Artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: plan-${{ env.SLUG }}
+          path: |
+            ${{ matrix.module }}/summary.txt
+            ${{ matrix.module }}/plan_raw.txt
+            ${{ matrix.module }}/metadata.txt
+          retention-days: 1
+
+  report:
+    name: 'Consolidate Report'
+    if: github.event_name == 'pull_request'
+    needs: [terragrunt]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: results
+
+      - name: Create Master Report
+        id: master-report
+        run: |
+          echo "### 🚀 Terragrunt Plan Summary" > report.md
+          echo "" >> report.md
+          
+          for metadata in $(find results -name "metadata.txt"); do
+            dir=$(dirname "$metadata")
+            summary="$dir/summary.txt"
+            plan_raw="$dir/plan_raw.txt"
+            MODULE_NAME=$(cat "$metadata")
+            
+            # 1. Status Logic
+            if [ ! -f "$summary" ]; then
+               STATUS="⚠️ UNKNOWN"
+               DESC="Plan was interrupted."
+            elif grep -q "INIT FAILED" "$summary"; then
+               STATUS="❌ FAILED (Init)"
+            elif grep -q "PLAN FAILED" "$summary"; then
+               STATUS="❌ FAILED (Plan)"
+            elif grep -q "SUMMARIZE FAILED" "$summary"; then
+               STATUS="✅ PASSED (Summary Error)"
+               DESC="Plan succeeded, but we couldn't generate the table. See error below."
+            else
+               STATUS="✅ SUCCESS"
+            fi
+
+            echo "### Module: \`${MODULE_NAME}\` ${STATUS}" >> report.md
+            [ -n "$DESC" ] && echo "> $DESC" >> report.md
+            
+            # 2. Summary Table (Collapsible)
+            if [ -f "$summary" ] && ! grep -q "FAILED" "$summary"; then
+               # Wrap in code block for alignment
+               echo "<details><summary>📦 Click to see changes (Total resources/outputs)</summary>" >> report.md
+               echo "" >> report.md
+               echo "\`\`\`" >> report.md
+               cat "$summary" >> report.md
+               echo "\`\`\`" >> report.md
+               echo "</details>" >> report.md
+            elif [ -f "$summary" ] && grep -q "SUMMARIZE FAILED" "$summary"; then
+               # Show the captured error
+               echo "<details><summary>❌ Show Summarization Error</summary>" >> report.md
+               echo "" >> report.md
+               echo "\`\`\`" >> report.md
+               cat "$summary" >> report.md
+               echo "\`\`\`" >> report.md
+               echo "</details>" >> report.md
+            fi
+            
+            # 3. Plan Output (Collapsible)
+            if [ -f "$plan_raw" ]; then
+              echo "<details><summary>🔍 Click to show full plan output</summary>" >> report.md
+              echo "" >> report.md
+              echo "\`\`\`terraform" >> report.md
+              head -c 50000 "$plan_raw" >> report.md
+              echo "\`\`\`" >> report.md
+              echo "</details>" >> report.md
+            fi
+            
+            echo "" >> report.md
+            echo "[View Detailed Action Logs](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})" >> report.md
+            echo "---" >> report.md
+          done
+          
+          echo "*Pushed by: @${{ github.actor }}, Action: \`${{ github.event_name }}\`*" >> report.md
+
+      - name: Post Master Comment
+        uses: thollander/actions-comment-pull-request@v2
+        with:
+          filePath: report.md
+          comment_tag: terragrunt_plan_summary
+          mode: recreate

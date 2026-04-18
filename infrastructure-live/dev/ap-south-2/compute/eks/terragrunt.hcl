@@ -17,6 +17,13 @@ locals {
 
 dependency "vpc" {
   config_path = "../../network/vpc"
+
+  # Mock outputs allow 'terragrunt plan' to work even if the VPC isn't applied yet.
+  mock_outputs = {
+    vpc_id          = "vpc-12345678"
+    private_subnets = ["subnet-12345678", "subnet-87654321"]
+  }
+  mock_outputs_allowed_terraform_commands = ["init", "validate", "plan", "show"]
 }
 
 inputs = {
