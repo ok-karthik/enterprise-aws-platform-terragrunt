@@ -12,20 +12,12 @@ module "eks" {
   source  = "terraform-aws-modules/eks/aws"
   version = "21.18.0"
 
-  cluster_name    = var.cluster_name
-  cluster_version = var.kubernetes_version
+  # --- v21 API: 'cluster_name' was renamed to 'name', 'cluster_version' → 'kubernetes_version' ---
+  name               = var.cluster_name
+  kubernetes_version = var.kubernetes_version
 
   vpc_id     = var.vpc_id
   subnet_ids = var.subnet_ids
-
-  cluster_endpoint_public_access  = true
-  cluster_endpoint_private_access = true
-
-  # --- GOVERNANCE: Standard Compute Configuration ---
-  # We enforce that all clusters use the new compute config standard.
-  compute_config = {
-    enabled = false
-  }
 
   # --- GOVERNANCE: Standard Node Groups ---
   # Every cluster in the organization uses Spot Managed Node Groups to save costs.

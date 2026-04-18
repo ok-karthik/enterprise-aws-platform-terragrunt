@@ -190,14 +190,16 @@ jobs:
           fi
           
           # 2. Plan
-          if ! terragrunt plan --non-interactive -no-color -out=tfplan 2>&1 | tee /dev/stderr | sed 's/^.*terraform: //g' > plan_raw.txt; then
+          # Save the plan binary to an absolute path so 'terragrunt show' can find it
+          # (Terragrunt caches internally, so relative 'tfplan' paths break on show)
+          PLAN_FILE="$(pwd)/tfplan.bin"
+          if ! terragrunt plan --non-interactive -no-color -out="$PLAN_FILE" 2>&1 | tee /dev/stderr | sed 's/^.*terraform: //g' > plan_raw.txt; then
             echo "PLAN FAILED" > summary.txt
             exit 1
           fi
           
-          # 3. Summarize (Standard output)
-          # Capture errors to a separate file to see why EKS might fail
-          if terragrunt show -json tfplan > tfplan.json 2>show_err.txt && \
+          # 3. Summarize using the absolute plan path
+          if terragrunt show -json "$PLAN_FILE" > tfplan.json 2>show_err.txt && \
              tf-summarize tfplan.json > summary_new.txt 2>sum_err.txt; then
             mv summary_new.txt summary.txt
           else
