@@ -3,7 +3,9 @@ include "root" {
 }
 
 terraform {
-  source = "../../../infrastructure-modules/eks"
+  # get_repo_root() is a Terragrunt built-in that always resolves correctly
+  # regardless of how deep this module is in the directory tree
+  source = "${get_repo_root()}/infrastructure-modules/eks"
 }
 
 locals {

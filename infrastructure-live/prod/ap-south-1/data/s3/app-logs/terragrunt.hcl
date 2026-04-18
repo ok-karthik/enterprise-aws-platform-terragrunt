@@ -3,9 +3,9 @@ include "root" {
 }
 
 terraform {
-  # Point to your local module
-  # In real life, this would be a Git URL
-  source = "../../../../../../modules/s3"
+  # Using the public terraform-aws-modules/s3-bucket module
+  # A local wrapper can be added to infrastructure-modules/s3/ in future if needed
+  source = "tfr://registry.terraform.io/terraform-aws-modules/s3-bucket/aws?version=4.6.0"
 }
 
 locals {
