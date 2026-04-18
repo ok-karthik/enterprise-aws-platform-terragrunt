@@ -27,7 +27,7 @@ jobs:
         run: |
           # Find all directories with terragrunt.hcl, excluding cache and hidden dirs
           MODULE_DIRS=$(find live -name "terragrunt.hcl" -not -path "*/.terragrunt-cache/*" | xargs dirname | sort -u | jq -R -s -c 'split("\n")[:-1]')
-          echo "modules=${MODULE_DIRS}" >> $GITHUB_OUTPUT
+          echo "modules=${MODULE_DIRS}" | tee -a "$GITHUB_OUTPUT"
 
   # 2. Stage: Execution - Run Parallel Plans
   terragrunt:
@@ -72,10 +72,16 @@ jobs:
         id: plan
         run: |
           # 1. Init
-          terragrunt init --terragrunt-non-interactive
+          if ! terragrunt init --terragrunt-non-interactive; then
+            echo "INIT FAILED" > summary.txt
+            exit 1
+          fi
           
-          # 2. Plan (Outputting to file and binary for summarize)
-          terragrunt plan --terragrunt-non-interactive -no-color -out=tfplan 2>&1 | tee /dev/stderr | sed 's/^.*terraform: //g' > plan_raw.txt
+          # 2. Plan
+          if ! terragrunt plan --terragrunt-non-interactive -no-color -out=tfplan 2>&1 | tee /dev/stderr | sed 's/^.*terraform: //g' > plan_raw.txt; then
+            echo "PLAN FAILED" > summary.txt
+            exit 1
+          fi
           
           # 3. Summarize
           terraform show -json tfplan > tfplan.json
@@ -84,6 +90,7 @@ jobs:
         continue-on-error: true
 
       - name: Upload Artifacts
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           # Use the directory name as the artifact name (escaped)
@@ -117,13 +124,19 @@ jobs:
             plan_raw="$dir/plan_raw.txt"
             
             # Determine module name from the path
-            # (e.g., results/results-0/live/dev/ap-south-2/vpc -> vpc)
             MODULE_NAME=$(echo "$dir" | awk -F'/' '{print $(NF-1) "/" $NF}')
             
-            echo "#### 📦 Module: \`${MODULE_NAME}\`" >> report.md
-            echo "\`\`\`" >> report.md
-            cat "$summary" >> report.md
-            echo "\`\`\`" >> report.md
+            # Check for failure
+            if grep -q "FAILED" "$summary"; then
+               echo "#### ❌ Module: \`${MODULE_NAME}\` (FAILED)" >> report.md
+               echo "> [!CAUTION]" >> report.md
+               echo "> The plan for this module failed. Check the [Action Logs](${{ github.server_url }}/${{ github.repo }}/actions/runs/${{ github.run_id }}) for details." >> report.md
+            else
+               echo "#### 📦 Module: \`${MODULE_NAME}\`" >> report.md
+               echo "\`\`\`" >> report.md
+               cat "$summary" >> report.md
+               echo "\`\`\`" >> report.md
+            fi
             
             echo "<details><summary>Show Full Plan Output</summary>" >> report.md
             echo "" >> report.md
