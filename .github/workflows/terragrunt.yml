@@ -91,11 +91,13 @@ jobs:
           fi
           
           # 3. Summarize
-          # Use binary path explicitly if needed, but adding to GITHUB_PATH should work
-          if terraform show -json tfplan > tfplan.json && tf-summarize tfplan.json > summary_new.txt; then
+          # We use 'terragrunt show' instead of 'terraform show' so it finds the cache
+          if terragrunt show -json tfplan > tfplan.json && tf-summarize tfplan.json > summary_new.txt; then
             mv summary_new.txt summary.txt
           else
             echo "SUMMARIZE FAILED (Plan passed)" > summary.txt
+            echo "--- DEBUG INFO ---" >> plan_raw.txt
+            echo "Summarization failed. Terragrunt show or tf-summarize encountered an error." >> plan_raw.txt
           fi
         working-directory: ${{ matrix.module }}
         continue-on-error: true
