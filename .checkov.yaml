@@ -24,3 +24,4 @@ skip-check:
   - CKV_AWS_79
   - CKV_AWS_8
   - CKV2_AWS_5  # Ensure that Security Groups are attached to another resource (false positive in modules)
+  - CKV_TF_1    # Requires git commit hash for module sources — false positive for Terraform Registry modules using 'version ='
