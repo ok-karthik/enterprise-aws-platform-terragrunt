@@ -59,8 +59,8 @@ jobs:
 
       - name: Install tf-summarize
         run: |
-          curl -sL https://github.com/dineshba/tf-summarize/releases/latest/download/tf-summarize_linux_amd64.tar.gz | tar xz
-          sudo mv tf-summarize /usr/local/bin/
+          curl -sL https://github.com/dineshba/tf-summarize/releases/latest/download/tf-summarize_linux_amd64.tar.gz | tar xz || true
+          [ -f tf-summarize ] && sudo mv tf-summarize /usr/local/bin/ || echo "tf-summarize install failed"
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
@@ -71,6 +71,9 @@ jobs:
       - name: Terragrunt Init & Plan
         id: plan
         run: |
+          # Initialize status
+          echo "PENDING" > summary.txt
+
           # 1. Init
           if ! terragrunt init --terragrunt-non-interactive; then
             echo "INIT FAILED" > summary.txt
@@ -84,8 +87,11 @@ jobs:
           fi
           
           # 3. Summarize
-          terraform show -json tfplan > tfplan.json
-          tf-summarize tfplan.json > summary.txt
+          if terraform show -json tfplan > tfplan.json && tf-summarize tfplan.json > summary_new.txt; then
+            mv summary_new.txt summary.txt
+          else
+            echo "SUMMARIZE FAILED (Plan passed)" > summary.txt
+          fi
         working-directory: ${{ matrix.module }}
         continue-on-error: true
 
@@ -97,7 +103,6 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          # Use the directory name as the artifact name (escaped)
           name: results-${{ strategy.job-index }}
           path: |
             ${{ matrix.module }}/summary.txt
@@ -105,7 +110,6 @@ jobs:
             ${{ matrix.module }}/metadata.txt
           retention-days: 1
 
-  # 3. Stage: Reporting - Consolidate all plans into one PR comment
   report:
     name: 'Consolidate Report'
     if: github.event_name == 'pull_request'
@@ -117,44 +121,48 @@ jobs:
         with:
           path: results
 
-      - name: Debug Artifact Structure
-        run: |
-          echo "--- Listing contents of results directory ---"
-          ls -R results
-          echo "--- Finding all summary.txt files ---"
-          find results -name "summary.txt"
-
       - name: Create Master Report
         id: master-report
         run: |
-          set -x
           echo "### 🚀 Terragrunt Plan Summary" > report.md
           echo "" >> report.md
           
-          # Use find to locate all summary files regardless of nesting
-          for summary in $(find results -name "summary.txt"); do
-            echo "Processing summary file: $summary"
-            dir=$(dirname "$summary")
+          # Loop over metadata files to ensure every module is caught
+          for metadata in $(find results -name "metadata.txt"); do
+            dir=$(dirname "$metadata")
+            summary="$dir/summary.txt"
             plan_raw="$dir/plan_raw.txt"
-            metadata="$dir/metadata.txt"
+            MODULE_NAME=$(cat "$metadata")
             
-            # Use metadata file for module name, fallback to path if missing
-            MODULE_NAME=$(cat "$metadata" 2>/dev/null || echo "$dir" | awk -F'/' '{print $(NF-1) "/" $NF}')
-            echo "Module name resolved to: $MODULE_NAME"
-            
-            # Check for failure
-            if grep -qE "FAILED|INIT|PLAN" "$summary"; then
-               echo "#### ❌ Module: \`${MODULE_NAME}\` (FAILED)" >> report.md
-               echo "> [!CAUTION]" >> report.md
-               echo "> The plan for this module failed. Check the [Action Logs](${{ github.server_url }}/${{ github.repo }}/actions/runs/${{ github.run_id }}) for details." >> report.md
+            # 1. Handle Status
+            if [ ! -f "$summary" ]; then
+               STATUS="⚠️ UNKNOWN"
+               DESC="Plan was interrupted or crashed."
+            elif grep -q "INIT FAILED" "$summary"; then
+               STATUS="❌ FAILED (Init)"
+               DESC="Initialization failed. Check logs."
+            elif grep -q "PLAN FAILED" "$summary"; then
+               STATUS="❌ FAILED (Plan)"
+               DESC="Plan generation failed. Check details below."
+            elif grep -q "SUMMARIZE FAILED" "$summary"; then
+               STATUS="✅ PASSED (Summary Error)"
+               DESC="Plan succeeded, but we couldn't generate the summary table."
             else
-               echo "#### 📦 Module: \`${MODULE_NAME}\`" >> report.md
+               STATUS="✅ SUCCESS"
+               DESC=""
+            fi
+
+            echo "### Module: \`${MODULE_NAME}\` ${STATUS}" >> report.md
+            [ -n "$DESC" ] && echo "> $DESC" >> report.md
+            
+            # 2. Show Summary Table if successful
+            if [ -f "$summary" ] && ! grep -q "FAILED" "$summary"; then
                echo "\`\`\`" >> report.md
-               cat "$summary" | tee -a report.md
+               cat "$summary" >> report.md
                echo "\`\`\`" >> report.md
             fi
             
-            # Only show plan output if it exists
+            # 3. Handle Plan Output
             if [ -f "$plan_raw" ]; then
               echo "<details><summary>Show Full Plan Output</summary>" >> report.md
               echo "" >> report.md
@@ -162,11 +170,10 @@ jobs:
               head -c 50000 "$plan_raw" >> report.md
               echo "\`\`\`" >> report.md
               echo "</details>" >> report.md
-            else
-              echo "> _No plan output available (Initialization failed)_" >> report.md
             fi
             
             echo "" >> report.md
+            echo "[View Detailed Logs](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})" >> report.md
             echo "---" >> report.md
           done
           
