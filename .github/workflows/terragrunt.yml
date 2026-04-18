@@ -92,7 +92,7 @@ jobs:
           # 3. Summarize (Markdown output)
           # Capture errors to a separate file to see why EKS might fail
           if terragrunt show -json tfplan > tfplan.json 2>show_err.txt && \
-             tf-summarize -template=markdown tfplan.json > summary_new.md 2>sum_err.txt; then
+             tf-summarize -md tfplan.json > summary_new.md 2>sum_err.txt; then
             mv summary_new.md summary.txt
           else
             echo "SUMMARIZE FAILED (Plan passed)" > summary.txt
