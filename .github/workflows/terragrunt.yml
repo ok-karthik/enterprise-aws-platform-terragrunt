@@ -26,7 +26,7 @@ jobs:
         id: set-modules
         run: |
           # Find all directories with terragrunt.hcl, excluding cache and hidden dirs
-          MODULE_DIRS=$(find live -name "terragrunt.hcl" -not -path "*/.terragrunt-cache/*" | xargs dirname | sort -u | jq -R -s -c 'split("\n")[:-1]')
+          MODULE_DIRS=$(find infrastructure-live infrastructure-bootstrap -name "terragrunt.hcl" -not -path "*/.terragrunt-cache/*" | xargs dirname | sort -u | jq -R -s -c 'split("\n")[:-1]')
           echo "modules=${MODULE_DIRS}" | tee -a "$GITHUB_OUTPUT"
 
   # 2. Stage: Execution - Run Parallel Plans
@@ -112,19 +112,29 @@ jobs:
         with:
           path: results
 
+      - name: Debug Artifact Structure
+        run: |
+          echo "--- Listing contents of results directory ---"
+          ls -R results
+          echo "--- Finding all summary.txt files ---"
+          find results -name "summary.txt"
+
       - name: Create Master Report
         id: master-report
         run: |
+          set -x
           echo "### 🚀 Terragrunt Plan Summary" > report.md
           echo "" >> report.md
           
           # Use find to locate all summary files regardless of nesting
           for summary in $(find results -name "summary.txt"); do
+            echo "Processing summary file: $summary"
             dir=$(dirname "$summary")
             plan_raw="$dir/plan_raw.txt"
             
             # Determine module name from the path
             MODULE_NAME=$(echo "$dir" | awk -F'/' '{print $(NF-1) "/" $NF}')
+            echo "Module name resolved to: $MODULE_NAME"
             
             # Check for failure
             if grep -q "FAILED" "$summary"; then
@@ -134,7 +144,7 @@ jobs:
             else
                echo "#### 📦 Module: \`${MODULE_NAME}\`" >> report.md
                echo "\`\`\`" >> report.md
-               cat "$summary" >> report.md
+               cat "$summary" | tee -a report.md
                echo "\`\`\`" >> report.md
             fi
             
