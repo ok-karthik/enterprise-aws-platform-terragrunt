@@ -1,5 +1,8 @@
 name: 'Terragrunt Teardown (Manual)'
 
+# This workflow takes manual inputs for environment selection and safety confirmation.
+# Slating Checkov CKV_GHA_7 as a skip because inputs are required for surgical teardown.
+# checkov:skip=CKV_GHA_7: Manual inputs are required for environment selection and safety confirmation.
 on:
   workflow_dispatch:
     inputs:
@@ -17,8 +20,8 @@ on:
         type: string
 
 permissions:
-  id-token: write
-  contents: read
+  contents: read      # Minimum required
+  id-token: write      # Required for OIDC AWS authentication
 
 jobs:
   discover:
