@@ -41,15 +41,11 @@ jobs:
           echo "modules=$MODULES" >> $GITHUB_OUTPUT
 
   destroy:
-    name: 'Destroy: ${{ matrix.module }}'
+    name: 'Destroy'
     needs: [discover]
     if: github.event.inputs.confirm_destruction == 'DESTROY'
     runs-on: ubuntu-latest
     environment: ${{ github.event.inputs.environment }}
-    strategy:
-      fail-fast: false
-      matrix:
-        module: ${{ fromJson(needs.discover.outputs.modules) || fromJson('[]') }}
     env:
       AWS_REGION: ${{ vars.AWS_REGION }}
       AWS_ROLE_ARN: ${{ vars.AWS_ROLE_ARN }}
@@ -73,7 +69,8 @@ jobs:
           role-to-assume: ${{ env.AWS_ROLE_ARN }}
           aws-region: ${{ env.AWS_REGION }}
 
-      - name: Terragrunt Destroy
+      - name: Terragrunt Destroy (Sequential)
         run: |
-          terragrunt destroy --terragrunt-non-interactive -auto-approve
-        working-directory: ${{ matrix.module }}
+          # Using run-all ensures dependencies are respected during cleanup
+          terragrunt run-all destroy --terragrunt-non-interactive -auto-approve
+        working-directory: infrastructure-live/${{ github.event.inputs.environment }}
