@@ -105,17 +105,22 @@ jobs:
 
       - name: Generate Cost Estimates from Plan Files
         run: |
-          # Infracost ignores 'name' in config files for JSON plan inputs.
-          # We use jq to directly rename projects in the output JSON instead.
+          # Use the metadata.txt file we uploaded as the source of truth for the module name.
+          # This is much more reliable than parsing the folder paths.
           ESTIMATE_FILES=()
-          while IFS= read -r plan_json; do
-            # Extract: plans/<artifact-slug>/<module-path>/tfplan.json → <module-path>
-            module_name=$(echo "$plan_json" | sed 's|plans/[^/]*/||' | sed 's|/tfplan.json$||')
-            out_file="$(dirname "$plan_json")/infracost.json"
+          while IFS= read -r metadata_file; do
+            module_name=$(cat "$metadata_file")
+            plan_json="$(dirname "$metadata_file")/tfplan.json"
+            out_file="$(dirname "$metadata_file")/infracost.json"
+
+            if [ ! -f "$plan_json" ]; then
+              echo "⚠️ Skip: No tfplan.json found for $module_name"
+              continue
+            fi
 
             # Generate the cost estimate
             infracost breakdown \
-              --path "$(pwd)/$plan_json" \
+              --path "$plan_json" \
               --format json \
               --out-file "$out_file" || true
 
@@ -126,10 +131,10 @@ jobs:
               echo "✅ Renamed project to: $module_name"
               ESTIMATE_FILES+=("$out_file")
             fi
-          done < <(find plans -name "tfplan.json")
+          done < <(find plans -name "metadata.txt")
 
           if [ ${#ESTIMATE_FILES[@]} -eq 0 ]; then
-            echo "No tfplan.json files found — ensure plan stage ran successfully"
+            echo "No cost estimates generated — ensure plan stage ran successfully"
             exit 0
           fi
 
