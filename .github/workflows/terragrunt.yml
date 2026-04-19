@@ -456,15 +456,11 @@ jobs:
   # 4. Stage: Deployment - Apply Changes (Manual Gates)
   # ─────────────────────────────────────────────────────────────
   apply-dev:
-    name: 'Apply (Dev): ${{ matrix.module }}'
+    name: 'Apply (Dev)'
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     needs: [plan-dev, discover]
     runs-on: ubuntu-latest
     environment: dev
-    strategy:
-      fail-fast: false
-      matrix:
-        module: ${{ fromJson(needs.discover.outputs.dev_modules) || fromJson('[]') }}
     env:
       AWS_REGION: ${{ vars.AWS_REGION }}
       AWS_ROLE_ARN: ${{ vars.AWS_ROLE_ARN }}
@@ -488,21 +484,18 @@ jobs:
           role-to-assume: ${{ env.AWS_ROLE_ARN }}
           aws-region: ${{ env.AWS_REGION }}
 
-      - name: Terragrunt Apply
+      - name: Terragrunt Apply (Sequential)
         run: |
-          terragrunt apply --terragrunt-non-interactive -auto-approve
-        working-directory: ${{ matrix.module }}
+          # Using run-all ensures dependencies (VPC -> EKS) are respected
+          terragrunt run-all apply --terragrunt-non-interactive -auto-approve
+        working-directory: infrastructure-live/dev
 
   apply-prod:
-    name: 'Apply (Prod): ${{ matrix.module }}'
+    name: 'Apply (Prod)'
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     needs: [apply-dev, plan-prod, discover]
     runs-on: ubuntu-latest
     environment: prod
-    strategy:
-      fail-fast: false
-      matrix:
-        module: ${{ fromJson(needs.discover.outputs.prod_modules) || fromJson('[]') }}
     env:
       AWS_REGION: ${{ vars.AWS_REGION }}
       AWS_ROLE_ARN: ${{ vars.AWS_ROLE_ARN }}
@@ -526,7 +519,8 @@ jobs:
           role-to-assume: ${{ env.AWS_ROLE_ARN }}
           aws-region: ${{ env.AWS_REGION }}
 
-      - name: Terragrunt Apply
+      - name: Terragrunt Apply (Sequential)
         run: |
-          terragrunt apply --terragrunt-non-interactive -auto-approve
-        working-directory: ${{ matrix.module }}
+          # Using run-all ensures dependencies are respected
+          terragrunt run-all apply --terragrunt-non-interactive -auto-approve
+        working-directory: infrastructure-live/prod
