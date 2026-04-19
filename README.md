@@ -38,16 +38,32 @@ This platform follows a **Hierarchical Blueprint Pattern** using Terragrunt. It 
 The core of this platform is a sophisticated **5-Stage Pipeline** that transitions infrastructure from code to production with multiple security and cost gates.
 
 ### Pipeline Workflow
+
+<p align="center">
+  <img src=".github/assets/pipeline-workflow.png" width="800" alt="Pipeline Graph">
+</p>
+
 1.  **🔍 Code Quality**: Recursive `TFLint` validation against AWS best practices.
 2.  **🛡️ Security Gate**: Dual-engine scanning using `Checkov` (IaC compliance) and `Trivy` (vulnerability detection).
 3.  **💰 Cost Visibility**: Real-time cost estimation per PR using `Infracost`, allowing for FinOps-driven engineering decisions.
+
+<p align="center">
+  <img src=".github/assets/infracost-summary.png" width="800" alt="Infracost Report">
+</p>
+
 4.  **🚀 Parallel Planning**: Simultaneous planning across all environment modules for rapid engineering feedback.
 5.  **🚦 Manual Approval Gates**: Environment-protected deployment using GitHub Environments. No code reaches `Dev` or `Prod` without explicit manual review in the Actions UI.
 
+<p align="center">
+  <img src=".github/assets/manual-approval-gate.png" width="800" alt="Manual Approval Gate">
+</p>
+
 > [!TIP]
 > **View our professional PR experience:**
-> - [Consolidated Plan Report] (Add your screenshot link here)
-> - [Infracost Change Analysis] (Add your screenshot link here)
+>
+> <p align="center">
+>   <img src=".github/assets/terragrunt-plan-summary.png" width="700" alt="Consolidated Plan Summary">
+> </p>
 
 ---
 
@@ -75,4 +91,4 @@ The core of this platform is a sophisticated **5-Stage Pipeline** that transitio
 
 ---
 
-*This platform is maintained as a showcase of senior Platform Engineering patterns. For inquiries, please visit [karthik-orugonda](https://github.com/karthik-orugonda).*
+*This platform is maintained as a showcase of senior Platform Engineering patterns. For inquiries, please reach out to [ok-karthik](https://github.com/ok-karthik).*
