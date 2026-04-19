@@ -7,12 +7,155 @@ on:
   pull_request:
 
 permissions:
-  id-token: write # Required for OIDC
+  id-token: write       # Required for OIDC
   contents: read
-  pull-requests: write # Required to post plan comments
+  pull-requests: write  # Required to post plan and cost comments
+  security-events: write # Required to upload SARIF security reports
 
 jobs:
+  # ─────────────────────────────────────────────────────────────
+  # Gate 1: Code Quality — TFLint
+  # ─────────────────────────────────────────────────────────────
+  lint:
+    name: '🔍 Lint (TFLint)'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Git Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup TFLint
+        uses: terraform-linters/setup-tflint@v4
+        with:
+          tflint_version: v0.54.0
+
+      - name: Init TFLint (download AWS plugin)
+        run: tflint --init
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+
+      - name: Run TFLint on modules
+        run: tflint --chdir=infrastructure-modules --recursive --format=compact
+
+      - name: Run TFLint on live
+        run: tflint --chdir=infrastructure-live --recursive --format=compact
+
+  # ─────────────────────────────────────────────────────────────
+  # Gate 2: Security — Checkov + Trivy
+  # ─────────────────────────────────────────────────────────────
+  security:
+    name: '🛡️ Security Scan (Checkov + Trivy)'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Git Checkout
+        uses: actions/checkout@v4
+
+      - name: Run Checkov
+        uses: bridgecrewio/checkov-action@v12
+        with:
+          config_file: .checkov.yaml
+          output_format: cli,sarif
+          output_file_path: console,checkov-results.sarif
+          soft_fail: false
+
+      - name: Upload Checkov SARIF to GitHub Security Tab
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: checkov-results.sarif
+          category: checkov
+
+      - name: Run Trivy IaC Scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: config
+          scan-ref: .
+          format: sarif
+          output: trivy-results.sarif
+          severity: CRITICAL,HIGH
+          exit-code: '0' # Informational; Checkov is the hard gate
+
+      - name: Upload Trivy SARIF to GitHub Security Tab
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        continue-on-error: true
+        with:
+          sarif_file: trivy-results.sarif
+          category: trivy
+
+  # ─────────────────────────────────────────────────────────────
+  # Gate 3: Cost Estimation — Infracost (informational)
+  # Runs AFTER terragrunt plans so it can use the pre-generated plan files.
+  # No AWS credentials needed — Infracost reads plan JSON directly.
+  # ─────────────────────────────────────────────────────────────
+  cost:
+    name: '💰 Cost Estimate (Infracost)'
+    if: github.event_name == 'pull_request'
+    needs: [terragrunt]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Setup Infracost
+        uses: infracost/actions/setup@v3
+        with:
+          api-key: ${{ secrets.INFRACOST_API_KEY }}
+
+      - name: Download Plan Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: plans
+
+      - name: Generate Cost Estimates from Plan Files
+        run: |
+          # Infracost ignores 'name' in config files for JSON plan inputs.
+          # We use jq to directly rename projects in the output JSON instead.
+          ESTIMATE_FILES=()
+          while IFS= read -r plan_json; do
+            # Extract: plans/<artifact-slug>/<module-path>/tfplan.json → <module-path>
+            module_name=$(echo "$plan_json" | sed 's|plans/[^/]*/||' | sed 's|/tfplan.json$||')
+            out_file="$(dirname "$plan_json")/infracost.json"
+
+            # Generate the cost estimate
+            infracost breakdown \
+              --path "$(pwd)/$plan_json" \
+              --format json \
+              --out-file "$out_file" || true
+
+            # Rename the project directly in the JSON using jq
+            if [ -f "$out_file" ]; then
+              jq --arg name "$module_name" '.projects[0].name = $name' \
+                "$out_file" > "${out_file}.tmp" && mv "${out_file}.tmp" "$out_file"
+              echo "✅ Renamed project to: $module_name"
+              ESTIMATE_FILES+=("$out_file")
+            fi
+          done < <(find plans -name "tfplan.json")
+
+          if [ ${#ESTIMATE_FILES[@]} -eq 0 ]; then
+            echo "No tfplan.json files found — ensure plan stage ran successfully"
+            exit 0
+          fi
+
+          # Merge all renamed estimates into one report
+          PATH_ARGS=$(printf ' --path %s' "${ESTIMATE_FILES[@]}")
+          infracost output $PATH_ARGS --format json --out-file /tmp/infracost.json
+
+      - name: Post Infracost PR Comment
+        continue-on-error: true
+        run: |
+          # Render the comment locally from our jq-renamed JSON — bypasses Infracost Cloud caching
+          infracost output \
+            --path /tmp/infracost.json \
+            --format github-comment \
+            --out-file /tmp/infracost-comment.md
+
+      - name: Post Cost Comment to PR
+        uses: thollander/actions-comment-pull-request@v2
+        with:
+          filePath: /tmp/infracost-comment.md
+          comment_tag: infracost_cost_estimate
+          mode: recreate
+
+  # ─────────────────────────────────────────────────────────────
   # 1. Stage: Discovery - Find all Terragrunt modules
+  # ─────────────────────────────────────────────────────────────
   discover:
     name: 'Discover Modules'
     runs-on: ubuntu-latest
@@ -25,14 +168,15 @@ jobs:
       - name: Find Modules
         id: set-modules
         run: |
-          # Find all directories with terragrunt.hcl, excluding cache and hidden dirs
-          MODULE_DIRS=$(find infrastructure-live infrastructure-bootstrap -name "terragrunt.hcl" -not -path "*/.terragrunt-cache/*" | xargs dirname | sort -u | jq -R -s -c 'split("\n")[:-1]')
-          echo "modules=${MODULE_DIRS}" | tee -a "$GITHUB_OUTPUT"
+          # Find all directories with terragrunt.hcl, excluding the root and bootstrap
+          # This ensures we only run the pipeline for regional/live infrastructure
+          MODULES=$(find infrastructure-live -name "terragrunt.hcl" -not -path "*/.terragrunt-cache/*" | xargs -I {} dirname {} | jq -R . | jq -s -c .)
+          echo "modules=$MODULES" >> $GITHUB_OUTPUT
 
   # 2. Stage: Execution - Run Parallel Plans
   terragrunt:
     name: 'Plan: ${{ matrix.module }}'
-    needs: [discover]
+    needs: [discover, lint, security]
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -84,14 +228,16 @@ jobs:
           fi
           
           # 2. Plan
-          if ! terragrunt plan --non-interactive -no-color -out=tfplan 2>&1 | tee /dev/stderr | sed 's/^.*terraform: //g' > plan_raw.txt; then
+          # Save the plan binary to an absolute path so 'terragrunt show' can find it
+          # (Terragrunt caches internally, so relative 'tfplan' paths break on show)
+          PLAN_FILE="$(pwd)/tfplan.bin"
+          if ! terragrunt plan --non-interactive -no-color -out="$PLAN_FILE" 2>&1 | tee /dev/stderr | sed 's/^.*terraform: //g' > plan_raw.txt; then
             echo "PLAN FAILED" > summary.txt
             exit 1
           fi
           
-          # 3. Summarize (Standard output)
-          # Capture errors to a separate file to see why EKS might fail
-          if terragrunt show -json tfplan > tfplan.json 2>show_err.txt && \
+          # 3. Summarize using the absolute plan path
+          if terragrunt show -json "$PLAN_FILE" > tfplan.json 2>show_err.txt && \
              tf-summarize tfplan.json > summary_new.txt 2>sum_err.txt; then
             mv summary_new.txt summary.txt
           else
@@ -121,6 +267,7 @@ jobs:
             ${{ matrix.module }}/summary.txt
             ${{ matrix.module }}/plan_raw.txt
             ${{ matrix.module }}/metadata.txt
+            ${{ matrix.module }}/tfplan.json
           retention-days: 1
 
   report:

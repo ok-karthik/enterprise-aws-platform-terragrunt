@@ -13,7 +13,7 @@ dependency "oidc_provider" {
   mock_outputs = {
     arn = "arn:aws:iam::123456789012:oidc-provider/token.actions.githubusercontent.com"
   }
-  mock_outputs_allowed_terraform_commands = ["init", "validate", "plan"]
+  mock_outputs_allowed_terraform_commands = ["init", "validate", "plan", "show"]
 }
 
 locals {

@@ -3,9 +3,9 @@ include "root" {
 }
 
 terraform {
-  source = "tfr://registry.terraform.io/terraform-aws-modules/vpc/aws?version=6.6.0"
-  # Direct invocation of the public module pinned to specific version
-  # See https://registry.terraform.io/modules/terraform-aws-modules/vpc/aws/latest for more details
+  # get_repo_root() is a Terragrunt built-in that always resolves correctly
+  # regardless of how deep this module is in the directory tree
+  source = "${get_repo_root()}/infrastructure-modules/vpc"
 }
 
 locals {
@@ -18,8 +18,9 @@ locals {
 }
 
 inputs = {
-  name = "main-vpc-${local.env}"
-  cidr = "10.0.0.0/16"
+  name         = "main-vpc-${local.env}"
+  cidr         = "10.0.0.0/16"
+  cluster_name = local.cluster_name
   
   azs             = ["${local.aws_region}a", "${local.aws_region}b", "${local.aws_region}c"]
   private_subnets = ["10.0.1.0/24", "10.0.2.0/24", "10.0.3.0/24"]
@@ -28,19 +29,9 @@ inputs = {
   enable_nat_gateway  = true
   single_nat_gateway  = true
 
-  public_subnet_tags = {
-    "kubernetes.io/role/elb" = 1
-  }
-  private_subnet_tags = {
-    "kubernetes.io/role/internal-elb" = 1
-    # Adding this tag helps EKS 'discover' the subnets
-    "kubernetes.io/cluster/${local.cluster_name}" = "owned" 
-  }
-
-  # Useful standard tagging
+  # NOTICE: Tagging is now handled automatically by the wrapper module!
   tags = {
-    Project     = "AWS-Learning"
-    Environment = local.env
-    ManagedBy   = "Terragrunt"
+    Project     = "Infrastructure-Automation"
+    Environment = title(local.env)  # title() capitalizes first letter: dev→Dev, prod→Prod
   }
 }
