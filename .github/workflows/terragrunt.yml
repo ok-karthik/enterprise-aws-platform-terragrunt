@@ -151,6 +151,7 @@ jobs:
         with:
           filePath: /tmp/infracost-comment.md
           comment_tag: infracost_cost_estimate
+          GITHUB_TOKEN: ${{ github.token }}
           mode: recreate
 
   # ─────────────────────────────────────────────────────────────
