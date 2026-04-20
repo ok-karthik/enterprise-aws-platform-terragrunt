@@ -1,105 +1,94 @@
-# 🏗️ AWS Infrastructure Foundation
+# 🏗️ Enterprise AWS Platform (Terragrunt & Terraform)
 
-A professional-grade, multi-environment infrastructure-as-code repository managed with **Terragrunt** and **Terraform**. This project demonstrates industry best practices for modularity, automated dependency management, and secure CI/CD pipelines.
+[![Terragrunt](https://img.shields.io/badge/Infrastructure-Terragrunt-blue)](https://terragrunt.gruntwork.io/)
+[![Terraform](https://img.shields.io/badge/IAC-Terraform-blueviolet)](https://www.terraform.io/)
+[![Security](https://img.shields.io/badge/Security-Checkov%2BTrivy-success)](https://github.com/bridgecrewio/checkov)
+[![Licence](https://img.shields.io/badge/License-MIT-gray.svg)](LICENSE)
 
-## 🌟 Key Features
+A production-grade, multi-environment AWS platform architecture designed for scalability, security governance, and FinOps efficiency. This project demonstrates **Staff Engineer level patterns** in Infrastructure-as-Code (IaC) management, focusing on modularity, policy-driven security, and automated delivery.
 
-*   **Multi-Environment Architecture**: Dry, hierarchical configuration using Terragrunt for `dev` and `prod` environments.
-*   **Infrastructure-as-Code**: 100% declarative infrastructure using AWS public modules for VPC, EKS, and IAM.
-*   **Automated Dependency Updates**: Integration with **Renovatebot** to keep Terraform and Terragrunt modules up-to-date.
-*   **Secure CI/CD**: GitHub Actions pipeline using **OIDC (OpenID Connect)** for passwordless authentication to AWS.
-*   **Cost Efficiency**: Use of **Spot Instances** for EKS Managed Node Groups in development environments.
+---
 
-## 🏗️ Architecture Overview
+## 🏛️ Project Architecture
 
-```mermaid
-graph TD
-    subgraph GitHub
-        GHA[GitHub Actions]
-        Ren[Renovatebot]
-    end
+This platform follows a **Hierarchical Blueprint Pattern** using Terragrunt. It separates the "Generic Blueprint Library" from the "Live Environment Implementation," ensuring 100% DRY (Don't Repeat Yourself) code.
 
-    subgraph AWS_Cloud
-        subgraph Networking
-            VPC[VPC / Main Network]
-            NAT[NAT Gateway]
-            IGW[Internet Gateway]
-        end
-
-        subgraph Compute
-            EKS[Amazon EKS Cluster]
-            MNG[Managed Node Groups - Spot]
-        end
-
-        subgraph Security
-            OIDC[OIDC Identity Provider]
-            IAM[IAM Roles & Policies]
-        end
-    end
-
-    GHA -- OIDC Trust --> OIDC
-    OIDC -- Assume Role --> IAM
-    IAM -- Manage --> VPC
-    IAM -- Manage --> EKS
-    VPC -- Foundation --> EKS
-    EKS -- Runs on --> MNG
-```
-
-## 📁 Repository Structure
+### 🧬 Repository Structure
 
 ```text
 .
-├── .github/workflows/      # CI/CD pipelines (GitHub Actions)
-├── modules/                # Reusable, local Terraform modules
-│   └── s3/                 # Example local module for S3 buckets
-├── live/                   # The hierarchical environment configuration
-│   ├── root.hcl            # Global settings (Backend & Provider generation)
-│   ├── dev/
-│   │   ├── account.hcl     # Dev account-specific variables (Account ID, Alias)
-│   │   ├── env.hcl         # Dev environment-specific variables
-│   │   └── ap-south-2/
-│   │       ├── region.hcl  # Region-specific variables
-│   │       ├── network/    # VPC and networking layer
-│   │       ├── security/   # IAM and OIDC Trust configurations
-│   │       └── compute/    # EKS and Kubernetes resources
-│   └── prod/               # Production environment (mirrors dev structure)
+├── .github/workflows/          # 🛡️ 5-Stage Multi-Environment Pipeline
+├── infrastructure-modules/      # 📦 The Blueprint Library (Reusable)
+│   ├── network/                # VPC, Transit Gateway, Private Links
+│   ├── compute/                # EKS, Lambda, Auto-scaling
+│   └── data/                   # RDS, S3, OpenSearch
+├── infrastructure-live/         # 🚀 The Deployment Hub (Stateful)
+│   ├── _envcommon/             # 🧬 DRY inheritance layer (Centralized versions)
+│   ├── dev/                    # Development Environment (Low cost, high speed)
+│   │   ├── env.hcl             # Env-specific overrides (Spot instances, logging)
+│   │   └── ap-south-2/         # AWS Region (Mumbai)
+│   └── prod/                   # Production Environment (High availability)
+└── infrastructure-bootstrap/   # 🗝️ Entry-point (OIDC & Remote State Hub)
 ```
 
-### 🧬 How it works: Terragrunt Inheritance
-This project uses a "Deep Merge" strategy to keep code DRY (Don't Repeat Yourself):
-1.  **`root.hcl`**: Automatically creates the S3 backend and the AWS provider for every module.
-2.  **`account/env/region.hcl`**: These files define variables at each layer.
-3.  **Module `terragrunt.hcl`**: The final child configuration reads all parent files and injects them as variables.
+---
+
+## 🚀 The Automated Platform (CI/CD)
+
+The core of this platform is a sophisticated **5-Stage Pipeline** that transitions infrastructure from code to production with multiple security and cost gates.
+
+### Pipeline Workflow
+
+<p align="center">
+  <img src=".github/assets/pipeline-workflow.png" width="800" alt="Pipeline Graph">
+</p>
+
+1.  **🔍 Code Quality**: Recursive `TFLint` validation against AWS best practices.
+2.  **🛡️ Security Gate**: Dual-engine scanning using `Checkov` (IaC compliance) and `Trivy` (vulnerability detection).
+3.  **💰 Cost Visibility**: Real-time cost estimation per PR using `Infracost`, allowing for FinOps-driven engineering decisions.
+
+<p align="center">
+  <img src=".github/assets/infracost-summary.png" width="800" alt="Infracost Report">
+</p>
+
+4.  **🚀 Parallel Planning**: Simultaneous planning across all environment modules for rapid engineering feedback.
+5.  **🚦 Manual Approval Gates**: Environment-protected deployment using GitHub Environments. No code reaches `Dev` or `Prod` without explicit manual review in the Actions UI.
+
+<p align="center">
+  <img src=".github/assets/manual-approval-gate.png" width="800" alt="Manual Approval Gate">
+</p>
+
+> [!TIP]
+> **View our professional PR experience:**
+>
+> <p align="center">
+>   <img src=".github/assets/terragrunt-plan-summary.png" width="600" alt="Consolidated Plan Summary">
+> </p>
 
 ---
 
-## 🚀 Getting Started
+## 🔐 Security & Governance
 
-### Prerequisites
-*   [Terraform](https://www.terraform.io/downloads.html) v1.10+
-*   [Terragrunt](https://terragrunt.gruntwork.io/docs/getting-started/install/) v0.50+
-*   [AWS CLI](https://aws.amazon.com/cli/) configured with appropriate permissions.
-
-### Deployment Sequence
-To stand up the environment, deploy in this specific order to respect dependencies:
-1.  **OIDC Provider**: `live/dev/ap-south-2/security/github-oidc-provider` (Run this once!)
-2.  **OIDC Role**: `live/dev/ap-south-2/security/github-oidc-role`
-3.  **Network**: `live/dev/ap-south-2/network/vpc`
-4.  **Compute**: `live/dev/ap-south-2/compute/eks`
+- **OIDC Authentication**: Zero long-lived AWS keys. All deployments use short-lived, trust-based OIDC tokens (OpenID Connect).
+- **Least Privilege**: The CI/CD role is strictly scoped to specific IAM actions and repository branches.
+- **Hierarchical Governance**: Global policies are enforced at the `root.hcl` and `_envcommon` layers, ensuring that every subsystem inherits standard tagging and security settings.
 
 ---
 
-## 🤖 Automation & Security
+## 💰 FinOps & Efficiency
 
-### Secure CI/CD (GitHub Actions + OIDC)
-The pipeline defined in `.github/workflows/terragrunt.yml` uses **OIDC (OpenID Connect)**. 
-*   **Keyless**: No AWS Access Keys are stored in GitHub Secrets.
-*   **Trust-Based**: AWS trusts the GitHub identity token based on the OIDC Provider we created.
-*   **Scoped**: The IAM Role is restricted to only allow this specific GitHub repository to assume it.
-
-### Automated Dependency Management (Renovatebot)
-Controlled via `renovate.json`, the project automatically receives PRs for module updates, ensuring the platform stays modern with zero manual effort.
+- **Spot Instances**: In the `dev` environment, EKS managed node groups are configured for Spot capacity to reduce costs by ~70-90%.
+- **Lifecycle Management**: A dedicated **Manual Teardown Workflow** allows for surgical removal of resources in non-production environments to avoid "hidden" costs when stacks are not in use.
+- **Tagging Policy**: Standardized tagging (`Project`, `Environment`, `Service`) is enforced at the module wrapper level to ensure 100% visibility in AWS Cost Explorer.
 
 ---
 
-*This project is part of my professional DevOps/Platform Engineering portfolio. For more information, please visit my [GitHub profile](https://github.com/karthik-orugonda).*
+## 🛠️ Deployment Instructions
+
+1.  **Bootstrap**: See [infrastructure-bootstrap/README.md](infrastructure-bootstrap/README.md) for initial Day-0 setup.
+2.  **Development**: Merge your infrastructure changes to a feature branch. Review the `Consolidated Report` in the PR.
+3.  **Production**: Merge to `main`. The pipeline will pause for your manual approval before applying changes to the `prod` environment.
+
+---
+
+*This platform is maintained as a showcase of senior Platform Engineering patterns. For inquiries, please reach out to [ok-karthik](https://github.com/ok-karthik).*
