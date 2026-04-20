@@ -93,7 +93,7 @@ jobs:
   # ─────────────────────────────────────────────────────────────
   # PHASE 2: Governance Audit (Policy Checks)
   # ─────────────────────────────────────────────────────────────
-  audit:
+  governance:
     name: '🛡️ Policy check: ${{ matrix.module.name }}'
     needs: [plan]
     runs-on: ubuntu-latest
