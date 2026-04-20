@@ -50,7 +50,7 @@ jobs:
   # Gate 2: Multi-Environment Planning (Single Stream)
   # ─────────────────────────────────────────────────────────────
   plan-dev:
-    name: '🚀 Plan: Dev'
+    name: '📝 Plan: Dev'
     needs: [static-analysis]
     runs-on: ubuntu-latest
     steps:
@@ -60,15 +60,15 @@ jobs:
       - name: Setup Platform
         uses: ./.github/actions/setup-platform
         with:
-          aws_region: ${{ vars.AWS_REGION }}
+          aws_region: ${{ env.AWS_REGION }}
           aws_role_arn: ${{ vars.AWS_ROLE_ARN }}
 
       - name: Terragrunt Plan (All)
-        run: terragrunt run-all plan --terragrunt-non-interactive -no-color
+        run: terragrunt run-all plan --non-interactive -no-color
         working-directory: infrastructure-live/dev
 
   plan-prod:
-    name: '🚀 Plan: Prod'
+    name: '📝 Plan: Prod'
     needs: [static-analysis]
     runs-on: ubuntu-latest
     steps:
@@ -78,11 +78,11 @@ jobs:
       - name: Setup Platform
         uses: ./.github/actions/setup-platform
         with:
-          aws_region: ${{ vars.AWS_REGION }}
+          aws_region: ${{ env.AWS_REGION }}
           aws_role_arn: ${{ vars.AWS_ROLE_ARN }}
 
       - name: Terragrunt Plan (All)
-        run: terragrunt run-all plan --terragrunt-non-interactive -no-color
+        run: terragrunt run-all plan --non-interactive -no-color
         working-directory: infrastructure-live/prod
 
   # ─────────────────────────────────────────────────────────────
@@ -122,7 +122,7 @@ jobs:
   # Phase 4: Deployment
   # ─────────────────────────────────────────────────────────────
   apply-dev:
-    name: 'Apply (Dev)'
+    name: '🚀 Apply (Dev)'
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     needs: [plan-dev]
     runs-on: ubuntu-latest
@@ -134,15 +134,15 @@ jobs:
       - name: Setup Platform
         uses: ./.github/actions/setup-platform
         with:
-          aws_region: ${{ vars.AWS_REGION }}
+          aws_region: ${{ env.AWS_REGION }}
           aws_role_arn: ${{ vars.AWS_ROLE_ARN }}
 
       - name: Terragrunt Apply
-        run: terragrunt run-all apply --terragrunt-non-interactive -auto-approve
+        run: terragrunt run-all apply --non-interactive -auto-approve
         working-directory: infrastructure-live/dev
 
   apply-prod:
-    name: 'Apply (Prod)'
+    name: '🚀 Apply (Prod)'
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     needs: [apply-dev, plan-prod]
     runs-on: ubuntu-latest
@@ -154,9 +154,9 @@ jobs:
       - name: Setup Platform
         uses: ./.github/actions/setup-platform
         with:
-          aws_region: ${{ vars.AWS_REGION }}
+          aws_region: ${{ env.AWS_REGION }}
           aws_role_arn: ${{ vars.AWS_ROLE_ARN }}
 
       - name: Terragrunt Apply
-        run: terragrunt run-all apply --terragrunt-non-interactive -auto-approve
+        run: terragrunt run-all apply --non-interactive -auto-approve
         working-directory: infrastructure-live/prod
