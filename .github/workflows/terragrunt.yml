@@ -140,12 +140,14 @@ jobs:
       - name: Run OPA Policy Gate
         run: |
           echo "Running OPA Governance check on all plan modules..."
-          find plans -name "*.json" -print0 | xargs -0 conftest test --policy policies/terraform
+          # Search everywhere for json plans to be path-agnostic
+          find . -name "*.json" -print0 | xargs -0 conftest test --policy policies/terraform
 
       - name: Run Checkov Security Gate
         run: |
           echo "Running Checkov Plan Audit..."
-          find plans -name "tfplan.json" -exec checkov -f {} --config-file .checkov.yaml \;
+          # Search everywhere for tfplan.json to be path-agnostic
+          find . -name "tfplan.json" -exec checkov -f {} --config-file .checkov.yaml \;
 
   # ─────────────────────────────────────────────────────────────
   # Gate 4: FinOps (Parallel Cost Audit)
