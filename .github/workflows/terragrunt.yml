@@ -53,7 +53,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Git Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Setup Platform
         uses: ./.github/actions/setup-platform
@@ -65,8 +65,8 @@ jobs:
         run: |
           # Terragrunt 1.x requires '--' for passthrough flags like -out
           terragrunt run --all plan --non-interactive -no-color -- -out=tfplan.bin
-          # Convert all binary plans to JSON for the audit gates
-          find . -name "tfplan.bin" -print0 | xargs -0 -I {} sh -c 'terragrunt show -json "{}" > "$(dirname "{}")/tfplan.json"'
+          # Convert all binary plans to JSON - MUST CD into module dir first
+          find . -name "tfplan.bin" -print0 | xargs -0 -I {} sh -c 'cd $(dirname "{}") && terragrunt show -json tfplan.bin > tfplan.json'
         working-directory: infrastructure-live/dev
 
       - name: Bundle Artifacts
@@ -87,7 +87,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Git Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Setup Platform
         uses: ./.github/actions/setup-platform
@@ -99,8 +99,8 @@ jobs:
         run: |
           # Terragrunt 1.x requires '--' for passthrough flags like -out
           terragrunt run --all plan --non-interactive -no-color -- -out=tfplan.bin
-          # Convert all binary plans to JSON for the audit gates
-          find . -name "tfplan.bin" -print0 | xargs -0 -I {} sh -c 'terragrunt show -json "{}" > "$(dirname "{}")/tfplan.json"'
+          # Convert all binary plans to JSON - MUST CD into module dir first
+          find . -name "tfplan.bin" -print0 | xargs -0 -I {} sh -c 'cd $(dirname "{}") && terragrunt show -json tfplan.bin > tfplan.json'
         working-directory: infrastructure-live/prod
 
       - name: Bundle Artifacts
@@ -125,7 +125,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Git Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Setup Platform
         uses: ./.github/actions/setup-platform
@@ -155,7 +155,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Git Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Setup Infracost
         uses: infracost/actions/setup@v3
