@@ -25,7 +25,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Git Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Setup Platform
         uses: ./.github/actions/setup-platform
@@ -73,10 +73,10 @@ jobs:
       - name: Bundle Artifacts
         run: |
           mkdir -p dist
-          find infrastructure-live/dev -name "tfplan.json" | cpio -pdm dist
+          find . -name "tfplan.json" | cpio -pdm dist
 
       - name: Upload Plans
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: plans-dev
           path: dist/
@@ -108,10 +108,10 @@ jobs:
       - name: Bundle Artifacts
         run: |
           mkdir -p dist
-          find infrastructure-live/prod -name "tfplan.json" | cpio -pdm dist
+          find . -name "tfplan.json" | cpio -pdm dist
 
       - name: Upload Plans
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: plans-prod
           path: dist/
@@ -133,7 +133,7 @@ jobs:
         uses: ./.github/actions/setup-platform
 
       - name: Download All Plans
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v5
         with:
           path: plans
 
@@ -162,7 +162,7 @@ jobs:
         uses: actions/checkout@v5
 
       - name: Setup Infracost
-        uses: infracost/actions/setup@v3
+        uses: infracost/actions/setup@v4
         with:
           api-key: ${{ secrets.INFRACOST_API_KEY }}
 
@@ -216,7 +216,7 @@ jobs:
     environment: prod
     steps:
       - name: Git Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Setup Platform
         uses: ./.github/actions/setup-platform
