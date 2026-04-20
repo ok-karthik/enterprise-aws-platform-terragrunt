@@ -64,7 +64,7 @@ jobs:
           aws_role_arn: ${{ vars.AWS_ROLE_ARN }}
 
       - name: Terragrunt Plan (All)
-        run: terragrunt run-all plan --non-interactive -no-color
+        run: terragrunt run --all plan --non-interactive -no-color
         working-directory: infrastructure-live/dev
 
   plan-prod:
@@ -82,7 +82,7 @@ jobs:
           aws_role_arn: ${{ vars.AWS_ROLE_ARN }}
 
       - name: Terragrunt Plan (All)
-        run: terragrunt run-all plan --non-interactive -no-color
+        run: terragrunt run --all plan --non-interactive -no-color
         working-directory: infrastructure-live/prod
 
   # ─────────────────────────────────────────────────────────────
@@ -138,7 +138,7 @@ jobs:
           aws_role_arn: ${{ vars.AWS_ROLE_ARN }}
 
       - name: Terragrunt Apply
-        run: terragrunt run-all apply --non-interactive -auto-approve
+        run: terragrunt run --all apply --non-interactive -auto-approve
         working-directory: infrastructure-live/dev
 
   apply-prod:
@@ -158,5 +158,5 @@ jobs:
           aws_role_arn: ${{ vars.AWS_ROLE_ARN }}
 
       - name: Terragrunt Apply
-        run: terragrunt run-all apply --non-interactive -auto-approve
+        run: terragrunt run --all apply --non-interactive -auto-approve
         working-directory: infrastructure-live/prod
