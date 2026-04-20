@@ -1,3 +1,5 @@
+package main
+
 # Rego V1: The modern standard
 import rego.v1
 

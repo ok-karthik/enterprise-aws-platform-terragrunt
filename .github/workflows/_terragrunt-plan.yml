@@ -26,7 +26,7 @@ jobs:
   # PHASE 1: Infrastructure Planning
   # ─────────────────────────────────────────────────────────────
   plan:
-    name: '🚀 Plan (${{ inputs.environment }}): ${{ matrix.module }}'
+    name: '🚀 Plan: ${{ matrix.module.name }}'
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -64,14 +64,15 @@ jobs:
           
           terragrunt show -json "$PLAN_FILE" > tfplan.json
           tf-summarize tfplan.json > summary.txt || echo "SUMMARIZE FAILED" > summary.txt
-        working-directory: ${{ matrix.module }}
+        working-directory: ${{ matrix.module.path }}
         continue-on-error: true
 
       - name: Prepare Artifact Metadata
         if: always()
         run: |
-          echo "${{ matrix.module }}" > ${{ matrix.module }}/metadata.txt
-          SLUG=$(echo "${{ matrix.module }}" | sed 's/\//-/g')
+          echo "${{ matrix.module.path }}" > metadata.txt
+          # Create a slug for the artifact name from the path
+          SLUG=$(echo "${{ matrix.module.path }}" | sed 's/\//-/g')
           echo "SLUG=$SLUG" >> $GITHUB_ENV
 
       - name: Upload Plan Artifacts
@@ -80,17 +81,17 @@ jobs:
         with:
           name: plan-${{ env.SLUG }}
           path: |
-            ${{ matrix.module }}/summary.txt
-            ${{ matrix.module }}/plan_raw.txt
-            ${{ matrix.module }}/metadata.txt
-            ${{ matrix.module }}/tfplan.json
+            summary.txt
+            plan_raw.txt
+            metadata.txt
+            ${{ matrix.module.path }}/tfplan.json
           retention-days: 1
 
   # ─────────────────────────────────────────────────────────────
-  # PHASE 2: Governance Audit (Visual Separation)
+  # PHASE 2: Governance Audit (Policy Checks)
   # ─────────────────────────────────────────────────────────────
   audit:
-    name: '⚖️ Policy (${{ inputs.environment }}): ${{ matrix.module }}'
+    name: '🛡️ Policy check: ${{ matrix.module.name }}'
     needs: [plan]
     runs-on: ubuntu-latest
     strategy:
@@ -106,7 +107,7 @@ jobs:
 
       - name: Prepare Module Slug
         run: |
-          SLUG=$(echo "${{ matrix.module }}" | sed 's/\//-/g')
+          SLUG=$(echo "${{ matrix.module.path }}" | sed 's/\//-/g')
           echo "SLUG=$SLUG" >> $GITHUB_ENV
 
       - name: Download Plan JSON
@@ -117,7 +118,7 @@ jobs:
 
       - name: ⚖️ Policy Gate (OPA)
         run: |
-          echo "Running Governance checks on ${{ matrix.module }}..."
+          echo "Running Governance checks on ${{ matrix.module.name }}..."
           conftest test plan_data/tfplan.json --policy $GITHUB_WORKSPACE/policies/terraform
 
       - name: 🛡️ Security Gate (Checkov Plan)
