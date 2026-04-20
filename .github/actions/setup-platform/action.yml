@@ -35,8 +35,14 @@ runs:
       run: |
         if ! command -v terragrunt &> /dev/null; then
           VERSION="${{ inputs.terragrunt_version }}"
+          
+          # Map runner architecture to Gruntwork naming convention
           ARCH=$(uname -m)
-          [ "$ARCH" == "aarch64" ] && ARCH="arm64"
+          case $ARCH in
+            x86_64) ARCH="amd64" ;;
+            aarch64|arm64) ARCH="arm64" ;;
+          esac
+          
           echo "Installing Terragrunt v${VERSION} for linux_${ARCH}..."
           curl -sL "https://github.com/gruntwork-io/terragrunt/releases/download/v${VERSION}/terragrunt_linux_${ARCH}" -o terragrunt
           chmod +x terragrunt
@@ -45,10 +51,27 @@ runs:
           echo "$HOME/.local/bin" >> $GITHUB_PATH
         fi
 
-    - name: Setup TFLint
-      uses: terraform-linters/setup-tflint@v4
-      with:
-        tflint_version: ${{ inputs.tflint_version }}
+    - name: Install TFLint
+      shell: bash
+      run: |
+        if ! command -v tflint &> /dev/null; then
+          # Use same ARCH from previous step if possible, but localized for safety
+          ARCH=$(uname -m)
+          case $ARCH in
+            x86_64) ARCH="amd64" ;;
+            aarch64|arm64) ARCH="arm64" ;;
+          esac
+          
+          VERSION="${{ inputs.tflint_version }}"
+          echo "Installing TFLint ${VERSION} for linux_${ARCH}..."
+          curl -sL "https://github.com/terraform-linters/tflint/releases/download/${VERSION}/tflint_linux_${ARCH}.zip" -o tflint.zip
+          unzip tflint.zip
+          chmod +x tflint
+          mkdir -p $HOME/.local/bin
+          mv tflint $HOME/.local/bin/
+          rm tflint.zip
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
+        fi
 
     - name: Install Conftest
       shell: bash
