@@ -30,7 +30,7 @@ This platform follows a **Hierarchical Blueprint Pattern** using Terragrunt. It 
 │   ├── _envcommon/             # 🧬 DRY inheritance layer (Centralized versions)
 │   ├── dev/                    # Development Environment (Low cost, high speed)
 │   │   ├── env.hcl             # Env-specific overrides (Spot instances, logging)
-│   │   └── ap-south-2/         # AWS Region (Mumbai)
+│   │   └── eu-central-1/        # AWS Region (Frankfurt)
 │   └── prod/                   # Production Environment (High availability)
 └── infrastructure-bootstrap/   # 🗝️ Entry-point (OIDC & Remote State Hub)
 ```
