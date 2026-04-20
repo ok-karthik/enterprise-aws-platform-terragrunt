@@ -57,31 +57,35 @@ jobs:
           fi
           
           PLAN_FILE="$(pwd)/tfplan.bin"
-          if ! terragrunt plan --non-interactive -no-color -out="$PLAN_FILE" 2>&1 | tee /v/stderr | sed 's/^.*terraform: //g' > plan_raw.txt; then
+          if ! terragrunt plan --non-interactive -no-color -out="$PLAN_FILE" 2>&1 | tee /dev/stderr | sed 's/^.*terraform: //g' > plan_raw.txt; then
             echo "PLAN FAILED" > summary.txt
             exit 1
           fi
           
           terragrunt show -json "$PLAN_FILE" > tfplan.json
           tf-summarize tfplan.json > summary.txt || echo "SUMMARIZE FAILED (Plan passed)" > summary.txt
+          
+          echo "SUCCESS" > status.txt
         working-directory: ${{ matrix.module.path }}
-        continue-on-error: true
 
       - name: Bundle Artifacts
         if: always()
         run: |
-          # Create a flat staging directory for artifacts
           mkdir -p dist
-          cp ${{ matrix.module.path }}/summary.txt dist/ || true
-          cp ${{ matrix.module.path }}/plan_raw.txt dist/ || true
-          cp ${{ matrix.module.path }}/tfplan.json dist/ || true
+          # Copy from the module directory to our flat staging area
+          cp ${{ matrix.module.path }}/summary.txt dist/ 2>/dev/null || true
+          cp ${{ matrix.module.path }}/plan_raw.txt dist/ 2>/dev/null || true
+          cp ${{ matrix.module.path }}/tfplan.json dist/ 2>/dev/null || true
           echo "${{ matrix.module.path }}" > dist/metadata.txt
+          
+          # Debug: Show what we are about to upload
+          echo "Artifacts to be uploaded:"
+          ls -R dist
 
       - name: Upload Plan Artifacts
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          # Use the pre-calculated slug from the discovery job
           name: plan-${{ matrix.module.slug }}
           path: dist/
           retention-days: 1
@@ -107,13 +111,21 @@ jobs:
       - name: Download Plan JSON
         uses: actions/download-artifact@v4
         with:
-          # Use the pre-calculated slug from the discovery job
           name: plan-${{ matrix.module.slug }}
           path: plan_data
+
+      - name: Debug Downloaded Files
+        run: |
+          echo "Content of plan_data:"
+          ls -R plan_data
 
       - name: ⚖️ Policy Gate (OPA)
         run: |
           echo "Running Governance checks on ${{ matrix.module.name }}..."
+          if [ ! -f plan_data/tfplan.json ]; then
+            echo "Error: tfplan.json not found in plan_data/"
+            exit 1
+          fi
           conftest test plan_data/tfplan.json --policy $GITHUB_WORKSPACE/policies/terraform
 
       - name: 🛡️ Security Gate (Checkov Plan)
