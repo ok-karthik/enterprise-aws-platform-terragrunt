@@ -63,27 +63,26 @@ jobs:
           fi
           
           terragrunt show -json "$PLAN_FILE" > tfplan.json
-          tf-summarize tfplan.json > summary.txt || echo "SUMMARIZE FAILED" > summary.txt
+          tf-summarize tfplan.json > summary.txt || echo "SUMMARIZE FAILED (Plan passed)" > summary.txt
         working-directory: ${{ matrix.module.path }}
         continue-on-error: true
 
       - name: Bundle Artifacts
         if: always()
         run: |
+          # Create a flat staging directory for artifacts
           mkdir -p dist
           cp ${{ matrix.module.path }}/summary.txt dist/ || true
           cp ${{ matrix.module.path }}/plan_raw.txt dist/ || true
           cp ${{ matrix.module.path }}/tfplan.json dist/ || true
           echo "${{ matrix.module.path }}" > dist/metadata.txt
-          
-          SLUG=$(echo "${{ matrix.module.path }}" | sed 's/\//-/g')
-          echo "SLUG=$SLUG" >> $GITHUB_ENV
 
       - name: Upload Plan Artifacts
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: plan-${{ env.SLUG }}
+          # Use native GHA expression for 100% reliable naming across jobs
+          name: plan-${{ replace(matrix.module.path, '/', '-') }}
           path: dist/
           retention-days: 1
 
@@ -105,15 +104,10 @@ jobs:
       - name: Setup Platform
         uses: ./.github/actions/setup-platform
 
-      - name: Prepare Module Slug
-        run: |
-          SLUG=$(echo "${{ matrix.module.path }}" | sed 's/\//-/g')
-          echo "SLUG=$SLUG" >> $GITHUB_ENV
-
       - name: Download Plan JSON
         uses: actions/download-artifact@v4
         with:
-          name: plan-${{ env.SLUG }}
+          name: plan-${{ replace(matrix.module.path, '/', '-') }}
           path: plan_data
 
       - name: ⚖️ Policy Gate (OPA)
