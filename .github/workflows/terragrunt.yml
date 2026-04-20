@@ -21,7 +21,7 @@ jobs:
   # Gate 1: Static Analysis
   # ─────────────────────────────────────────────────────────────
   static-analysis:
-    name: '🔍 Static Analysis'
+    name: '🔍 Static: TFLint & Checkov'
     runs-on: ubuntu-latest
     steps:
       - name: Git Checkout
@@ -121,7 +121,7 @@ jobs:
   # Gate 3: Audit (Parallel Policy & Security)
   # ─────────────────────────────────────────────────────────────
   governance:
-    name: '⚖️ Governance Audit'
+    name: '⚖️ Policy: OPA Conftest'
     if: github.event_name == 'pull_request'
     needs: [plan-dev, plan-prod]
     runs-on: ubuntu-latest
@@ -153,7 +153,7 @@ jobs:
   # Gate 4: FinOps (Parallel Cost Audit)
   # ─────────────────────────────────────────────────────────────
   finops:
-    name: '💰 FinOps Audit'
+    name: '💰 FinOps: Infracost'
     if: github.event_name == 'pull_request'
     needs: [plan-dev, plan-prod]
     runs-on: ubuntu-latest
