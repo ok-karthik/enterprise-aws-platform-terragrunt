@@ -67,10 +67,16 @@ jobs:
         working-directory: ${{ matrix.module.path }}
         continue-on-error: true
 
-      - name: Prepare Artifact Metadata
+      - name: Bundle Artifacts
         if: always()
         run: |
-          echo "${{ matrix.module.path }}" > metadata.txt
+          # Create a flat staging directory for artifacts to avoid path nesting issues
+          mkdir -p dist
+          cp ${{ matrix.module.path }}/summary.txt dist/ || true
+          cp ${{ matrix.module.path }}/plan_raw.txt dist/ || true
+          cp ${{ matrix.module.path }}/tfplan.json dist/ || true
+          echo "${{ matrix.module.path }}" > dist/metadata.txt
+          
           # Create a slug for the artifact name from the path
           SLUG=$(echo "${{ matrix.module.path }}" | sed 's/\//-/g')
           echo "SLUG=$SLUG" >> $GITHUB_ENV
@@ -80,11 +86,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: plan-${{ env.SLUG }}
-          path: |
-            summary.txt
-            plan_raw.txt
-            metadata.txt
-            ${{ matrix.module.path }}/tfplan.json
+          path: dist/
           retention-days: 1
 
   # ─────────────────────────────────────────────────────────────
@@ -119,6 +121,7 @@ jobs:
       - name: ⚖️ Policy Gate (OPA)
         run: |
           echo "Running Governance checks on ${{ matrix.module.name }}..."
+          # Since artifacts were bundled flat in dist/, they are now at the root of plan_data/
           conftest test plan_data/tfplan.json --policy $GITHUB_WORKSPACE/policies/terraform
 
       - name: 🛡️ Security Gate (Checkov Plan)
