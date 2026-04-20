@@ -13,7 +13,7 @@ inputs = {
   
   # Ensure compliance with Policy-as-Code gates
   tags = {
-    Environment = "prod"
+    Environment = title(local.env)
     Service     = "network"
   }
 }

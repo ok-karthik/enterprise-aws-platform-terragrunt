@@ -176,47 +176,6 @@ jobs:
           fi
           exit 0
 
-  report:
-    name: 'Consolidate Report'
-    if: github.event_name == 'pull_request'
-    needs: [plan-dev, plan-prod]
-    runs-on: ubuntu-latest
-    steps:
-      - name: Download Artifacts
-        uses: actions/download-artifact@v4
-        with:
-          path: results
-
-      - name: Create Master Report
-        run: |
-          echo "### 🚀 Terragrunt Plan Summary" > report.md
-          echo "" >> report.md
-          for metadata in $(find results -name "metadata.txt"); do
-            dir=$(dirname "$metadata")
-            summary="$dir/summary.txt"
-            MODULE_NAME=$(cat "$metadata")
-            STATUS=$(grep -q "SUCCESS" "$summary" && echo "✅ SUCCESS" || echo "❌ FAILED")
-            
-            echo "### Module: \`${MODULE_NAME}\` ${STATUS}" >> report.md
-            if [ -f "$summary" ]; then
-               echo "<details><summary>📦 Click to see changes</summary>" >> report.md
-               echo "" >> report.md
-               echo "\`\`\`" >> report.md
-               cat "$summary" >> report.md
-               echo "\`\`\`" >> report.md
-               echo "</details>" >> report.md
-            fi
-            echo "" >> report.md
-          done
-          echo "*Pushed by: @${{ github.actor }}, Action: \`${{ github.event_name }}\`*" >> report.md
-
-      - name: Post Master Comment
-        uses: thollander/actions-comment-pull-request@v2
-        with:
-          filePath: report.md
-          comment_tag: terragrunt_plan_summary
-          mode: recreate
-
   # ─────────────────────────────────────────────────────────────
   # Deployment - Manual Gates
   # ─────────────────────────────────────────────────────────────

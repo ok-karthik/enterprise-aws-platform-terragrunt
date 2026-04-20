@@ -50,37 +50,24 @@ jobs:
       - name: Terragrunt Init & Plan
         id: plan
         run: |
-          echo "PENDING" > summary.txt
           if ! terragrunt init --non-interactive; then
-            echo "INIT FAILED" > summary.txt
             exit 1
           fi
           
           PLAN_FILE="$(pwd)/tfplan.bin"
           if ! terragrunt plan --non-interactive -no-color -out="$PLAN_FILE" 2>&1 | tee /dev/stderr | sed 's/^.*terraform: //g' > plan_raw.txt; then
-            echo "PLAN FAILED" > summary.txt
             exit 1
           fi
           
           terragrunt show -json "$PLAN_FILE" > tfplan.json
-          tf-summarize tfplan.json > summary.txt || echo "SUMMARIZE FAILED (Plan passed)" > summary.txt
-          
-          echo "SUCCESS" > status.txt
         working-directory: ${{ matrix.module.path }}
 
       - name: Bundle Artifacts
         if: always()
         run: |
           mkdir -p dist
-          # Copy from the module directory to our flat staging area
-          cp ${{ matrix.module.path }}/summary.txt dist/ 2>/dev/null || true
-          cp ${{ matrix.module.path }}/plan_raw.txt dist/ 2>/dev/null || true
           cp ${{ matrix.module.path }}/tfplan.json dist/ 2>/dev/null || true
-          echo "${{ matrix.module.path }}" > dist/metadata.txt
-          
-          # Debug: Show what we are about to upload
-          echo "Artifacts to be uploaded:"
-          ls -R dist
+          cp ${{ matrix.module.path }}/plan_raw.txt dist/ 2>/dev/null || true
 
       - name: Upload Plan Artifacts
         if: always()
