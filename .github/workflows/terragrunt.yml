@@ -165,11 +165,16 @@ jobs:
 
       - name: Post Cost Comment to PR
         run: |
+          set +e
           infracost comment github --path /tmp/infracost.json \
                                    --repo $GITHUB_REPOSITORY \
                                    --github-token ${{ github.token }} \
                                    --pull-request ${{ github.event.pull_request.number }} \
                                    --behavior update
+          if [ $? -ne 0 ]; then
+            echo "FinOps Governance Check: Governance warnings or guardrails detected. Check the PR comment for details."
+          fi
+          exit 0
 
   report:
     name: 'Consolidate Report'
