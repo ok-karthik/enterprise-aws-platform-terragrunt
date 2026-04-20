@@ -15,13 +15,13 @@ output:
 soft-fail-on:
   - LOW
 
-# Skip checks that are not applicable to this prototype
-# CKV_AWS_79: Ensure Instance Metadata Service Version 1 is not enabled
-#              -> EKS nodes use IMDSv1 by default in some module versions
-# CKV_AWS_8:  Ensure that any launch configuration or launch template has enabled detailed monitoring
-#              -> Acceptable for non-prod
+# Skip checks that are not applicable to this infrastructure or prototype
 skip-check:
-  - CKV_AWS_79
-  - CKV_AWS_8
-  - CKV2_AWS_5  # Ensure that Security Groups are attached to another resource (false positive in modules)
-  - CKV_TF_1    # Requires git commit hash for module sources — false positive for Terraform Registry modules using 'version ='
+  - CKV_AWS_79  # IMDSv1 check (EKS default)
+  - CKV_AWS_8   # Detailed monitoring
+  - CKV2_AWS_5  # SG attachment (false positive in modules)
+  - CKV_TF_1    # Git commit hash (false positive for Registry modules)
+  - CKV_GHA_7   # Skip 'workflow_dispatch inputs' check (Manual teardown needs inputs)
+
+# Enable deep scanning of external modules from Terraform Registry
+download-external-modules: true
