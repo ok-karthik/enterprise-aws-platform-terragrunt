@@ -140,7 +140,7 @@ jobs:
       - name: Run OPA Policy Gate
         run: |
           echo "Running OPA Governance check on all plan modules..."
-          conftest test plans/**/*.json --policy policies/terraform
+          find plans -name "*.json" -print0 | xargs -0 conftest test --policy policies/terraform
 
       - name: Run Checkov Security Gate
         run: |
@@ -193,7 +193,7 @@ jobs:
     environment: dev
     steps:
       - name: Git Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Setup Platform
         uses: ./.github/actions/setup-platform
