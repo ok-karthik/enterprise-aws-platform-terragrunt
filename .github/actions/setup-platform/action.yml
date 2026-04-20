@@ -41,7 +41,7 @@ runs:
         tflint_version: ${{ inputs.tflint_version }}
 
     - name: Setup Conftest
-      uses: open-policy-agent/setup-conftest@v1
+      uses: artis3n/setup-conftest@v2
       with:
         token: ${{ github.token }}
 
