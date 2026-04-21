@@ -122,7 +122,8 @@ jobs:
   # ─────────────────────────────────────────────────────────────
   governance:
     name: '⚖️ Policy: OPA Conftest'
-    if: github.event_name == 'pull_request'
+    # Run on both PRs (as a blocker) and Main (as an audit trail)
+    if: github.event_name == 'pull_request' || (github.event_name == 'push' && github.ref == 'refs/heads/main')
     needs: [plan-dev, plan-prod]
     runs-on: ubuntu-latest
     steps:
@@ -154,7 +155,8 @@ jobs:
   # ─────────────────────────────────────────────────────────────
   finops:
     name: '💰 FinOps: Infracost'
-    if: github.event_name == 'pull_request'
+    # Run on both PRs (as a blocker) and Main (as an audit trail)
+    if: github.event_name == 'pull_request' || (github.event_name == 'push' && github.ref == 'refs/heads/main')
     needs: [plan-dev, plan-prod]
     runs-on: ubuntu-latest
     steps:
@@ -173,6 +175,7 @@ jobs:
                              --out-file /tmp/infracost.json
 
       - name: Post Cost Comment
+        if: github.event_name == 'pull_request'
         run: |
           set +e
           infracost comment github --path /tmp/infracost.json \
