@@ -126,9 +126,10 @@ jobs:
 
       - name: Generate Cost Estimate
         run: |
-          infracost breakdown --path ${{ inputs.working_directory }} \
+          infracost breakdown --path . \
                              --format json \
                              --out-file /tmp/infracost.json
+        working-directory: ${{ inputs.working_directory }}
 
       - name: Post Cost Comment
         if: github.event_name == 'pull_request'
@@ -137,4 +138,5 @@ jobs:
                                    --repo $GITHUB_REPOSITORY \
                                    --github-token ${{ github.token }} \
                                    --pull-request ${{ github.event.pull_request.number }} \
-                                   --behavior update
+                                   --behavior update \
+                                   --tag ${{ inputs.environment }}
