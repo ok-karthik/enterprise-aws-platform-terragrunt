@@ -35,19 +35,22 @@ jobs:
       - name: Disaster Recovery (Smoke Test)
         run: ./infrastructure-live/scripts/smoke-test.sh
 
-      - name: Terragrunt Module Discovery
-        run: terragrunt run --all render-json --non-interactive
-        working-directory: ${{ inputs.working_directory }}
-
       - name: Terragrunt Plan
         run: |
+          # 1. Generate binary plans for all modules in the stack
           terragrunt run --all plan --non-interactive -no-color -- -out=tfplan.bin
           
-          echo "🔍 Converting binary plans to JSON..."
-          find . -name "tfplan.bin" -not -path "*/.terragrunt-cache/*" | while read -r plan_path; do
+          # 2. Find and convert binary plans to JSON for Security/Cost auditing
+          echo "🔍 Searching for binary plans and converting to JSON..."
+          
+          # NOTE: We do NOT exclude .terragrunt-cache here because Terragrunt often executes 
+          # plans inside the cache directory when dealing with remote modules or specific configurations.
+          find . -name "tfplan.bin" | while read -r plan_path; do
             dir_path=$(dirname "$plan_path")
             echo "Processing plan in $dir_path"
-            # CD into the directory so terraform has the correct context
+            
+            # We MUST 'cd' into the directory before running 'show' to ensure 
+            # Terraform has the correct local context to resolve the plan file.
             (cd "$dir_path" && terraform show -json tfplan.bin > tfplan.json)
           done
         working-directory: ${{ inputs.working_directory }}
