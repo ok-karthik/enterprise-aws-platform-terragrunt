@@ -31,10 +31,20 @@ module "eks" {
       max_size     = var.max_size
       desired_size = var.desired_size
 
-      # Simplify: Use the native disk_size attribute which the module 
-      # handles correctly for managed node groups.
-      use_custom_launch_template = false
+      # Force custom launch template to ensure GP3 overrides defaults
+      use_custom_launch_template = true
       disk_size                  = 20
+
+      block_device_mappings = {
+        xvda = {
+          device_name = "/dev/xvda"
+          ebs = {
+            volume_size           = 20
+            volume_type           = "gp3"
+            delete_on_termination = true
+          }
+        }
+      }
     }
   }
 

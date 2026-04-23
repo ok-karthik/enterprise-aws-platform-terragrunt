@@ -143,6 +143,7 @@ jobs:
 
       - name: Post Cost Comment
         if: github.event_name == 'pull_request'
+        continue-on-error: true
         run: |
           infracost comment github --path /tmp/infracost.json \
                                    --repo $GITHUB_REPOSITORY \
