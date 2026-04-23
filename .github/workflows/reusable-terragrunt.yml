@@ -133,9 +133,11 @@ jobs:
       - name: Generate Cost Estimate
         run: |
           # Use the pre-generated JSON plans for 100% accurate pricing
+          # We use a unique filename based on the full path to avoid collisions
           find plans -name "tfplan.json" | while read -r plan; do
-            # Append each plan to a combined report
-            infracost breakdown --path "$plan" --format json --out-file "cost-$(basename $(dirname $plan)).json"
+            unique_name=$(echo "$plan" | tr '/' '-')
+            echo "Processing plan for $plan -> cost-${unique_name}.json"
+            infracost breakdown --path "$plan" --format json --out-file "cost-${unique_name}.json"
           done
           
           # Combine all reports into one for the PR comment
@@ -143,12 +145,11 @@ jobs:
 
       - name: Post Cost Comment
         if: github.event_name == 'pull_request'
-        continue-on-error: true
         run: |
           infracost comment github --path /tmp/infracost.json \
                                    --repo $GITHUB_REPOSITORY \
                                    --github-token ${{ github.token }} \
                                    --pull-request ${{ github.event.pull_request.number }} \
-                                   --behavior delete-and-new \
+                                   --behavior update \
                                    --tag ${{ inputs.environment }} \
                                    --show-skipped
