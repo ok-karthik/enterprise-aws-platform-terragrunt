@@ -60,9 +60,6 @@ jobs:
       - name: License Compliance Check
         run: ./infrastructure-live/scripts/check-licenses.sh
 
-      - name: Disaster Recovery (Smoke Test)
-        run: ./infrastructure-live/scripts/smoke-test.sh
-
   # ─────────────────────────────────────────────────────────────
   # Gate 2-4: Multi-Environment Orchestration (Reusable)
   # ─────────────────────────────────────────────────────────────

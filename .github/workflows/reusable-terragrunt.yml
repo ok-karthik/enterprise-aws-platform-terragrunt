@@ -32,6 +32,9 @@ jobs:
           aws_region: ${{ vars.AWS_REGION }}
           aws_role_arn: ${{ vars.AWS_ROLE_ARN }}
 
+      - name: Disaster Recovery (Smoke Test)
+        run: ./infrastructure-live/scripts/smoke-test.sh
+
       - name: Terragrunt Plan
         run: |
           terragrunt run --all plan --non-interactive -no-color -- -out=tfplan.bin
