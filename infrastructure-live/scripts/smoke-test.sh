@@ -13,7 +13,10 @@ echo "🧪 Starting Platform Smoke Test..."
 
 # 1. HCL Syntax Check
 echo -e "\n1. Checking HCL formatting..."
-if find infrastructure-modules infrastructure-live infrastructure-bootstrap policies -name "*.hcl" -not -path "*/.*" -print0 | xargs -0 terragrunt hcl format --check; then
+if terraform fmt -check -recursive infrastructure-modules && \
+   terraform fmt -check -recursive infrastructure-live && \
+   terraform fmt -check -recursive infrastructure-bootstrap && \
+   terraform fmt -check -recursive policies; then
     echo -e "${GREEN}✅ HCL Formatting is correct.${NC}"
 else
     echo -e "${RED}❌ HCL Formatting issues found. Fix with 'terragrunt hcl format'.${NC}"
