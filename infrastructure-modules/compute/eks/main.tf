@@ -23,6 +23,7 @@ module "eks" {
   # Every cluster in the organization uses Spot Managed Node Groups to save costs.
   eks_managed_node_groups = {
     spot_nodes = {
+      ami_type       = "AL2_x86_64"
       instance_types = var.instance_types
       capacity_type  = "SPOT"
 
@@ -35,6 +36,7 @@ module "eks" {
       disk_size                  = null
 
       # --- FINOPS: Explicit GP3 Modernization ---
+      # We override the root block device to ensure we don't fall back to gp2
       block_device_mappings = {
         xvda = {
           device_name = "/dev/xvda"
