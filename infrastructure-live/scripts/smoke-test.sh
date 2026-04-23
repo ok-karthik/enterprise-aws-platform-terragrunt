@@ -13,10 +13,10 @@ echo "🧪 Starting Platform Smoke Test..."
 
 # 1. HCL Syntax Check
 echo -e "\n1. Checking HCL formatting..."
-if terragrunt hclfmt --check; then
+if terragrunt hcl format --check; then
     echo -e "${GREEN}✅ HCL Formatting is correct.${NC}"
 else
-    echo -e "${RED}❌ HCL Formatting issues found. Run 'terragrunt hclfmt' to fix.${NC}"
+    echo -e "${RED}❌ HCL Formatting issues found. Run 'terragrunt hcl format' to fix.${NC}"
     exit 1
 fi
 

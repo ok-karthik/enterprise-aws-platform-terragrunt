@@ -31,7 +31,7 @@ jobs:
         uses: ./.github/actions/setup-platform
 
       - name: Check HCL Formatting
-        run: terragrunt hclfmt --check
+        run: terragrunt hcl format --check
 
       - name: Terraform Validate
         run: |
