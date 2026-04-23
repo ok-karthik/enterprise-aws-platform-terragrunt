@@ -7,6 +7,11 @@
 
 A production-grade, multi-environment AWS platform architecture designed for scalability, security governance, and FinOps efficiency. This project demonstrates **Staff Engineer level patterns** in Infrastructure-as-Code (IaC) management, focusing on modularity, policy-driven security, and automated delivery.
 
+## 🧠 Development Approach
+Selective AI assistance was used for accelerating documentation and validating CI/CD patterns. All architectural decisions, structure, and tradeoffs were designed and reviewed independently.
+
+---
+
 <p align="center">
   <img src=".github/assets/architecture-infographic.png" width="900" alt="Enterprise Architecture Plan">
 </p>
@@ -104,6 +109,34 @@ While tools like Checkov handle general security, we use **Open Policy Agent (OP
 
 ---
 
+## 🛠️ Getting Started
+
+### 📋 Prerequisites
+Before you begin, ensure you have the following tools installed:
+- [Terraform](https://developer.hashicorp.com/terraform/downloads) (v1.5+)
+- [Terragrunt](https://terragrunt.gruntwork.io/docs/getting-started/quick-start/) (v0.50+)
+- [TFLint](https://github.com/terraform-linters/tflint)
+- [Checkov](https://www.checkov.io/1.Getting%20Started/Installation.html)
+- [Infracost](https://www.infracost.io/docs/)
+- [Conftest](https://www.conftest.dev/) (for OPA policy testing)
+
+### 💻 Local Development Setup
+1.  **Clone the Repo**:
+    ```bash
+    git clone https://github.com/ok-karthik/enterprise-aws-platform-terragrunt.git
+    cd enterprise-aws-platform-terragrunt
+    ```
+2.  **Initialize TFLint**:
+    ```bash
+    tflint --init
+    ```
+3.  **Local Validation**:
+    Run the Gate 1 checks locally to catch issues early:
+    ```bash
+    tflint --recursive
+    checkov -d .
+    ```
+
 ## 🛠️ Deployment Instructions
 
 1.  **Bootstrap**: See [infrastructure-bootstrap/README.md](infrastructure-bootstrap/README.md) for initial Day-0 setup.
@@ -112,4 +145,13 @@ While tools like Checkov handle general security, we use **Open Policy Agent (OP
 
 ---
 
+## 🤝 Contributing
+Contributions are welcome! Please ensure any new modules include:
+- TFLint validation
+- Checkov-compliant HCL
+- OPA-compliant tagging
+
+---
+
 *This platform is maintained as a showcase of senior Platform Engineering patterns. For inquiries, please reach out to [ok-karthik](https://github.com/ok-karthik).*
+
