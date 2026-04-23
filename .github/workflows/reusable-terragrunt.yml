@@ -38,18 +38,23 @@ jobs:
       - name: Terragrunt Plan
         run: |
           terragrunt run --all plan --non-interactive -no-color -- -out=tfplan.bin
-          find . -name ".terragrunt-cache" -prune -o -name "tfplan.bin" -print0 | xargs -0 -I {} sh -c 'cd $(dirname "{}") && terragrunt show -json tfplan.bin > tfplan.json'
+          # Convert binary plans to JSON. We use -ok to ensure we don't fail the whole loop if one conversion fails.
+          find . -name "tfplan.bin" -not -path "*/.terragrunt-cache/*" -exec sh -c 'terragrunt show -json {} > $(dirname {})/tfplan.json' \;
         working-directory: ${{ inputs.working_directory }}
+
+      - name: Debug: List Plans
+        run: find ${{ inputs.working_directory }} -name "tfplan.json"
 
       - name: Upload Plans
         uses: actions/upload-artifact@v5
         with:
           name: plans-${{ inputs.environment }}
           path: ${{ inputs.working_directory }}/**/tfplan.json
+          if-no-files-found: error
           retention-days: 1
 
-  audit:
-    name: "⚖️ Audit: ${{ inputs.environment }}"
+  security-governance:
+    name: "⚖️ Security & Governance (OPA/Checkov): ${{ inputs.environment }}"
     needs: [plan]
     runs-on: ubuntu-latest
     steps:
@@ -65,10 +70,10 @@ jobs:
           name: plans-${{ inputs.environment }}
           path: plans
 
-      - name: OPA Policy Gate
+      - name: OPA Policy Gate (Conftest)
         run: find plans -name "*.json" -print0 | xargs -0 conftest test --policy policies/terraform
 
-      - name: Checkov Plan Audit
+      - name: Checkov Security Audit
         run: find plans -name "tfplan.json" -exec checkov -f {} --config-file .checkov.yaml \;
 
       - name: Generate Compliance Summary
@@ -87,8 +92,8 @@ jobs:
           name: compliance-${{ inputs.environment }}
           path: compliance-report.md
 
-  finops:
-    name: "💰 FinOps: ${{ inputs.environment }}"
+  cost-analysis:
+    name: "💰 Cost Analysis (Infracost): ${{ inputs.environment }}"
     needs: [plan]
     runs-on: ubuntu-latest
     steps:

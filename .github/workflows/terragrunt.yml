@@ -18,10 +18,10 @@ env:
 
 jobs:
   # ─────────────────────────────────────────────────────────────
-  # Gate 1: High-Speed Static Analysis
+  # Gate 1: High-Speed Static Analysis (TFLint/Checkov)
   # ─────────────────────────────────────────────────────────────
-  quality-gate:
-    name: '🔍 Quality: Lint & Validate'
+  static-analysis:
+    name: '🔍 Static Analysis (TFLint/Checkov)'
     runs-on: ubuntu-latest
     steps:
       - name: Git Checkout
@@ -65,7 +65,7 @@ jobs:
   # ─────────────────────────────────────────────────────────────
   dev-stack:
     name: 'Dev'
-    needs: [quality-gate]
+    needs: [static-analysis]
     uses: ./.github/workflows/reusable-terragrunt.yml
     with:
       environment: 'dev'
@@ -75,7 +75,7 @@ jobs:
 
   prod-stack:
     name: 'Prod'
-    needs: [quality-gate]
+    needs: [static-analysis]
     uses: ./.github/workflows/reusable-terragrunt.yml
     with:
       environment: 'prod'
