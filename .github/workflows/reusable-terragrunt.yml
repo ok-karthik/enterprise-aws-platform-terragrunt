@@ -124,6 +124,12 @@ jobs:
         with:
           api-key: ${{ secrets.INFRACOST_API_KEY }}
 
+      - name: Download Plans
+        uses: actions/download-artifact@v5
+        with:
+          name: plans-${{ inputs.environment }}
+          path: plans
+
       - name: Generate Cost Estimate
         run: |
           # Use the pre-generated JSON plans for 100% accurate pricing
