@@ -126,11 +126,14 @@ jobs:
 
       - name: Generate Cost Estimate
         run: |
-          infracost breakdown --path . \
-                             --terraform-parse-hcl \
-                             --format json \
-                             --out-file /tmp/infracost.json
-        working-directory: ${{ inputs.working_directory }}
+          # Use the pre-generated JSON plans for 100% accurate pricing
+          find plans -name "tfplan.json" | while read -r plan; do
+            # Append each plan to a combined report
+            infracost breakdown --path "$plan" --format json --out-file "cost-$(basename $(dirname $plan)).json"
+          done
+          
+          # Combine all reports into one for the PR comment
+          infracost output --path "cost-*.json" --format json --out-file /tmp/infracost.json
 
       - name: Post Cost Comment
         if: github.event_name == 'pull_request'
