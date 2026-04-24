@@ -33,13 +33,13 @@ module "eks" {
 
       # Force custom launch template to ensure GP3 overrides defaults
       use_custom_launch_template = true
-      disk_size                  = 30
+      disk_size                  = 20
 
       block_device_mappings = {
         xvda = {
           device_name = "/dev/xvda"
           ebs = {
-            volume_size           = 30
+            volume_size           = 20
             volume_type           = "gp3"
             delete_on_termination = true
           }
