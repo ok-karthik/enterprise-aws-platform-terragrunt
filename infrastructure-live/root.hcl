@@ -20,6 +20,13 @@ locals {
   account_id = get_aws_account_id()
 }
 
+# --- VALIDATION ---
+# Include the shared validation layer to enforce platform standards
+include "validation" {
+  path = "${get_repo_root()}/infrastructure-live/_envcommon/validation.hcl"
+  # This ensures validation blocks in validation.hcl are executed for all modules
+}
+
 # Generate an AWS provider block
 generate "provider" {
   path      = "provider.tf"

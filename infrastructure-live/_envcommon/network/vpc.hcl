@@ -13,6 +13,12 @@ locals {
   aws_region  = local.region_vars.locals.aws_region
 }
 
+# --- VALIDATION ---
+validation {
+  condition     = startswith(local.aws_region, "eu-") || startswith(local.aws_region, "us-")
+  error_message = "❌ ERROR: VPC must be deployed in EU or US regions for compliance."
+}
+
 inputs = {
   name         = "main-vpc-${local.env}"
   cluster_name = local.cluster_name

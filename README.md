@@ -4,6 +4,7 @@
 [![Terraform](https://img.shields.io/badge/IAC-Terraform-blueviolet)](https://www.terraform.io/)
 [![Security](https://img.shields.io/badge/Security-Checkov%2BTrivy-success)](https://github.com/bridgecrewio/checkov)
 [![Licence](https://img.shields.io/badge/License-MIT-gray.svg)](LICENSE)
+[![License Checks](https://badgen.net/badge/license-checks/sast-green?icon=check)](infrastructure-live/scripts/check-licenses.sh)
 
 A production-grade, multi-environment AWS platform architecture designed for scalability, security governance, and FinOps efficiency. This project demonstrates **Staff Engineer level patterns** in Infrastructure-as-Code (IaC) management, focusing on modularity, policy-driven security, and automated delivery.
 
@@ -140,6 +141,12 @@ While tools like Checkov handle general security, we use **Open Policy Agent (OP
 
 - **Hierarchical Governance**: Global policies are enforced at the `root.hcl` and `_envcommon` layers, ensuring that every subsystem inherits standard tagging and security settings.
 
+### 🛡️ GitHub Governance & Branch Protection
+To maintain the integrity of the production environment, the following governance controls are implemented:
+- **[CODEOWNERS](.github/CODEOWNERS)**: Enforces mandatory reviews from the Platform Team for any changes to modules or live environments.
+- **Branch Protection**: It is RECOMMENDED to enable "Require pull request reviews before merging" and "Require status checks to pass" (e.g., `Static Analysis`) for the `main` branch.
+- **Merge Blockers**: Deployment to `prod` is gated by successful `dev` applies and manual environment approval.
+
 ---
 
 ## 💰 FinOps & Efficiency
@@ -149,6 +156,24 @@ While tools like Checkov handle general security, we use **Open Policy Agent (OP
 - **GP3 Storage Mandate**: Automated governance ensures all EBS volumes are provisioned as `gp3` (Amazon Linux 2023), optimizing for both performance and price.
 - **Lifecycle Management**: A dedicated **Manual Teardown Workflow** allows for surgical removal of resources in non-production environments to avoid "hidden" costs when stacks are not in use.
 - **Tagging Policy**: Standardized tagging (`Project`, `Environment`, `Service`) is enforced at the module wrapper level to ensure 100% visibility in AWS Cost Explorer.
+
+---
+
+## 🌪️ Disaster Recovery & Business Continuity
+
+The platform is designed with a **Recovery Point Objective (RPO)** of near-zero (via Git history) and a fast **Recovery Time Objective (RTO)** through automated orchestration.
+
+### 🧪 Automated Smoke Tests
+We provide a dedicated [smoke-test.sh](infrastructure-live/scripts/smoke-test.sh) that validates the platform's readiness for recovery. It checks:
+1.  **HCL Integrity**: Ensures all code is syntactically valid.
+2.  **Dependency Graph**: Validates that Terragrunt can resolve all module relationships.
+3.  **State Accessibility**: Verifies that the remote state backend is reachable.
+
+### 🔄 Recovery Procedure
+In the event of a total region failure:
+1.  Update the `aws_region` in the relevant `region.hcl`.
+2.  Run the **Terragrunt CI/CD** workflow (manually via `workflow_dispatch` if needed).
+3.  The pipeline will automatically recreate the stack in the new region, inheriting all enterprise guardrails.
 
 ---
 
@@ -189,6 +214,38 @@ Before you begin, ensure you have the following tools installed:
 ## 🧠 Development Approach
 
 Selective AI assistance was used for accelerating documentation and validating CI/CD patterns. All architectural decisions, directory structure, and engineering tradeoffs were designed and reviewed independently to ensure enterprise-grade stability.
+
+---
+
+## 📖 Operational & Scaling Guide
+
+This section provides actionable instructions for maintaining and expanding the platform.
+
+### 🏗️ Adding New Modules
+1.  **Define the Blueprint**: Create a new directory in `infrastructure-modules/` with your Terraform code (`main.tf`, `variables.tf`, etc.).
+2.  **Create Common Config**: Add a corresponding `.hcl` file in `infrastructure-live/_envcommon/` to define shared inputs and the source path.
+3.  **Implement in Live**: Create a `terragrunt.hcl` in the desired environment/region (e.g., `infrastructure-live/dev/eu-central-1/my-module/terragrunt.hcl`) that includes the common config:
+    ```hcl
+    include "root" { path = find_in_parent_folders("root.hcl") }
+    include "envcommon" { path = "${get_repo_root()}/infrastructure-live/_envcommon/my-module.hcl" }
+    ```
+
+### 🌍 Scaling to New Regions
+1.  **Duplicate Region Folder**: Copy an existing region folder (e.g., `eu-central-1`) to a new one (e.g., `us-east-1`).
+2.  **Update `region.hcl`**: Modify the `aws_region` variable in the new folder's `region.hcl`.
+3.  **Run Plan**: Terragrunt will automatically detect the new path and prompt to initialize a new remote state.
+
+### 🚀 Adding New Environments
+1.  **Duplicate Environment Folder**: Copy `infrastructure-live/dev` to `infrastructure-live/staging`.
+2.  **Update `env.hcl`**: Change the `env` variable and any environment-specific settings (e.g., `enable_nat_gateway`).
+3.  **Register in CI/CD**: Update `.github/workflows/terragrunt.yml` to include the new environment in the orchestration stages.
+
+### 🔧 Terragrunt Syntax Evolution (HCL v1 → v2)
+The platform is optimized for **Terragrunt v1.x (HCL v2)**. Key patterns used:
+- **`find_in_parent_folders()`**: For hierarchical configuration inheritance.
+*   **`read_terragrunt_config()`**: For loading variables from sibling `.hcl` files.
+- **`validation` blocks**: Catch misconfigurations (like invalid regions or environment names) before running Terraform.
+- **`get_repo_root()`**: Ensures absolute paths are resolved correctly across all execution environments.
 
 ---
 

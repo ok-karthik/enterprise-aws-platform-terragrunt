@@ -10,6 +10,12 @@ locals {
   cluster_name = local.env_vars.locals.cluster_name
 }
 
+# --- VALIDATION ---
+validation {
+  condition     = length(local.cluster_name) > 5
+  error_message = "❌ ERROR: Cluster name '${local.cluster_name}' is too short (min 5 chars)."
+}
+
 dependency "vpc" {
   config_path = "${get_terragrunt_dir()}/../../network/vpc" # Resolves relative to the live module directory
 
