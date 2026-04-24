@@ -12,9 +12,41 @@ Selective AI assistance was used for accelerating documentation and validating C
 
 ---
 
-<p align="center">
-  <img src=".github/assets/enterprise-architecture-blueprint.png" width="900" alt="Enterprise Architecture Plan">
-</p>
+```mermaid
+graph TD
+    subgraph Environments ["🌍 Environments Layer"]
+        direction LR
+        DEV["🟢 dev/eu-central-1<br/>Spot Optimized Sandbox"]
+        PROD["🔴 prod/eu-central-1<br/>High-Availability Cluster"]
+        COMMON["🟣 _envcommon/<br/>100% DRY Shared Logic"]
+    end
+
+    subgraph RepoRoot ["📂 Repository Root (repo-root/)"]
+        direction TB
+        MOD["🏗️ infrastructure-modules/<br/>(Blueprints)"]
+        LIVE["🚀 infrastructure-live/<br/>(Deliverables)"]
+        BOOT["🛠️ infrastructure-bootstrap/"]
+        
+        LIVE --- L_TREE["(See Structure Below)"]
+    end
+
+    subgraph Governance ["⚖️ Governance & Automation"]
+        direction LR
+        OIDC["🛡️ OIDC Keyless Auth<br/>Zero-Secret Security"]
+        COST["💰 Infracost Gates<br/>Cost Visibility"]
+        CICD["🚀 Parallel CI/CD<br/>High-Speed Feedback"]
+    end
+
+    Environments --- RepoRoot
+    RepoRoot --- Governance
+
+    style DEV fill:#1a1a1a,stroke:#2ea043,stroke-width:2px
+    style PROD fill:#1a1a1a,stroke:#f85149,stroke-width:2px
+    style COMMON fill:#1a1a1a,stroke:#a371f7,stroke-width:2px
+    style MOD fill:#0d1117,stroke:#58a6ff,stroke-width:2px
+    style LIVE fill:#0d1117,stroke:#58a6ff,stroke-width:2px
+    style BOOT fill:#0d1117,stroke:#58a6ff,stroke-width:2px
+```
 
 ---
 
@@ -26,18 +58,23 @@ This platform follows a **Hierarchical Blueprint Pattern** using Terragrunt. It 
 
 ```text
 .
-├── .github/workflows/          # 🛡️ 5-Stage Multi-Environment Pipeline
-├── infrastructure-modules/      # 📦 The Blueprint Library (Reusable)
-│   ├── network/                # VPC, Transit Gateway, Private Links
-│   ├── compute/                # EKS, Lambda, Auto-scaling
-│   └── data/                   # RDS, S3, OpenSearch
-├── infrastructure-live/         # 🚀 The Deployment Hub (Stateful)
-│   ├── _envcommon/             # 🧬 DRY inheritance layer (Centralized versions)
-│   ├── dev/                    # Development Environment (Low cost, high speed)
-│   │   ├── env.hcl             # Env-specific overrides (Spot instances, logging)
-│   │   └── eu-central-1/        # AWS Region (Frankfurt)
-│   └── prod/                   # Production Environment (High availability)
-└── infrastructure-bootstrap/   # 🗝️ Entry-point (OIDC & Remote State Hub)
+├── infrastructure-modules/      # 📦 Blueprint Library (Reusable Terraform)
+│   ├── network/vpc/            # - Standardized VPC & Subnets
+│   ├── compute/eks/            # - Production-Grade EKS
+│   └── data/s3/                # - Durable Object Storage
+│
+├── infrastructure-live/         # 🚀 Deployment Hub (Environment Config)
+│   ├── _envcommon/             # 🧬 Centralized DRY inheritance layer
+│   ├── dev/ (Regions)          # Sandbox Environment
+│   │   └── eu-central-1/
+│   │       ├── network/vpc/    #   - terragrunt.hcl
+│   │       └── compute/eks/    #   - terragrunt.hcl
+│   └── prod/ (Regions)         # Production Environment
+│       └── eu-central-1/
+│           ├── network/vpc/    #   - terragrunt.hcl
+│           └── compute/eks/    #   - terragrunt.hcl
+│
+└── infrastructure-bootstrap/   # 🗝️ Foundation (OIDC & Remote State Hub)
 ```
 
 ---
