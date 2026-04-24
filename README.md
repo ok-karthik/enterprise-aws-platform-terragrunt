@@ -13,7 +13,7 @@ Selective AI assistance was used for accelerating documentation and validating C
 ---
 
 <p align="center">
-  <img src=".github/assets/architecture-infographic.png" width="900" alt="Enterprise Architecture Plan">
+  <img src=".github/assets/enterprise-architecture-blueprint.png" width="900" alt="Enterprise Architecture Plan">
 </p>
 
 ---

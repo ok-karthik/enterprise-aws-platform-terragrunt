@@ -18,31 +18,40 @@
             --text-secondary: #8b949e;
         }
 
+        * {
+            box-shadow: none !important;
+            backdrop-filter: none !important;
+            -webkit-backdrop-filter: none !important;
+        }
+
         body {
-            background-color: var(--bg-color);
+            background-color: #0d1117;
             color: var(--text-primary);
             font-family: 'Inter', sans-serif;
             margin: 0;
-            padding: 60px;
+            padding: 0;
             display: flex;
             justify-content: center;
             align-items: center;
             min-height: 100vh;
+            user-select: none;
+            -webkit-user-select: none;
         }
 
         .master-wrapper {
-            border: 2px solid var(--accent-primary);
-            border-radius: 24px;
-            padding: 60px;
-            position: relative;
-            box-shadow: 0 0 40px rgba(88, 166, 255, 0.15), inset 0 0 20px rgba(88, 166, 255, 0.05);
-            background: linear-gradient(145deg, rgba(13, 17, 23, 0.9), rgba(22, 27, 34, 0.9));
-            max-width: 1500px;
+            padding: 80px;
+            background: #0d1117;
+            width: 100%;
+            max-width: 1600px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
         }
 
         .header {
             text-align: center;
             margin-bottom: 60px;
+            margin-top: 40px; /* Prevent title clipping */
         }
 
         .header h1 {
@@ -75,8 +84,6 @@
             border: 1px solid var(--border-color);
             border-radius: 16px;
             padding: 24px;
-            backdrop-filter: blur(10px);
-            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
         }
 
         .card h2 {
@@ -199,14 +206,14 @@
                         <div class="feature-icon">🧪</div>
                         <div class="feature-text">
                             <b>dev/eu-central-1</b>
-                            <span>Feature-rich development sandbox in Frankfurt with Spot optimization.</span>
+                            <span>Feature-rich development sandbox with Spot optimization.</span>
                         </div>
                     </div>
                     <div class="feature-item">
                         <div class="feature-icon">🛡️</div>
                         <div class="feature-text">
                             <b>prod/eu-central-1</b>
-                            <span>High-availability production cluster in Frankfurt with manual review gates.</span>
+                            <span>High-availability production cluster with manual review gates.</span>
                         </div>
                     </div>
                     <div class="feature-item">
@@ -238,7 +245,7 @@
             </div>
 
             <!-- Center: Tree Structure -->
-            <div class="card" style="box-shadow: 0 0 50px rgba(88, 166, 255, 0.1);">
+            <div class="card">
                 <h2 style="color: var(--accent-primary); border-bottom: 1px solid var(--border-color); padding-bottom: 15px;">
                     <span style="background-color: var(--accent-primary)"></span> repo-root/
                 </h2>
@@ -266,7 +273,7 @@
                         <li><span class="folder">infrastructure-live/</span> (Deliverables)
                             <ul>
                                 <li><span class="folder">_envcommon/</span> <span class="hcl"># The DRY Hub</span></li>
-                                <li><span class="folder">dev/</span> (Frankfurt)
+                                <li><span class="folder">dev/</span> (Regions)
                                     <ul>
                                         <li><span class="folder">eu-central-1/</span>
                                             <ul>
@@ -276,11 +283,12 @@
                                         </li>
                                     </ul>
                                 </li>
-                                <li class="last"><span class="folder">prod/</span> (Frankfurt)
+                                <li class="last"><span class="folder">prod/</span> (Regions)
                                     <ul>
                                         <li class="last"><span class="folder">eu-central-1/</span>
                                             <ul>
-                                                <li class="last"><span class="folder">data/s3/</span> <span class="hcl">terragrunt.hcl</span></li>
+                                                <li><span class="folder">network/vpc/</span> <span class="hcl">terragrunt.hcl</span></li>
+                                                <li class="last"><span class="folder">compute/eks/</span> <span class="hcl">terragrunt.hcl</span></li>
                                             </ul>
                                         </li>
                                     </ul>
