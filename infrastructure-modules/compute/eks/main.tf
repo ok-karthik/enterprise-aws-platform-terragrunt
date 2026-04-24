@@ -23,7 +23,7 @@ module "eks" {
   # Every cluster in the organization uses Spot Managed Node Groups to save costs.
   eks_managed_node_groups = {
     spot_nodes = {
-      ami_type       = "AL2_x86_64"
+      ami_type       = "AL2023_x86_64_STANDARD"
       instance_types = var.instance_types
       capacity_type  = "SPOT"
 
@@ -33,7 +33,7 @@ module "eks" {
 
       # Force custom launch template to ensure GP3 overrides defaults
       use_custom_launch_template = true
-      disk_size                  = 20
+      disk_size                  = null
 
       block_device_mappings = {
         xvda = {

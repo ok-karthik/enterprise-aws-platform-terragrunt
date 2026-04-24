@@ -118,7 +118,7 @@ jobs:
           infracost output --path "cost-*.json" --format json --out-file /tmp/infracost.json
 
       - name: "Post Cost Comment"
-        if: github.event_name == 'pull_request'
+        if: github.event.pull_request.number != null || github.event_name == 'pull_request'
         continue-on-error: true
         run: |
           infracost comment github --path /tmp/infracost.json \
