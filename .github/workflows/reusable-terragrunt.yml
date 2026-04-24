@@ -117,8 +117,8 @@ jobs:
           infracost output --path "cost-*.json" --format table --out-file /tmp/infracost-table.txt
 
           # 2. Change Summary (tf-summarize)
-          echo "## 📊 Infrastructure Change Summary" > /tmp/pr-comment.md
-          echo "> 💡 This report summarizes resource changes and estimated cost impact." >> /tmp/pr-comment.md
+          echo "## 📊 Infrastructure Change Summary (${{ inputs.environment }})" > /tmp/pr-comment.md
+          echo "> 💡 This report summarizes resource changes and estimated cost impact for the **${{ inputs.environment }}** environment." >> /tmp/pr-comment.md
           
           find plans -name "tfplan.json" | while read -r plan; do
             module_name=$(dirname $plan | sed 's|plans/||')
@@ -130,7 +130,7 @@ jobs:
           done
 
           # 3. Append Cost Table
-          echo -e "\n## 💰 Cost Estimate\n\`\`\`\n$(cat /tmp/infracost-table.txt)\n\`\`\`" >> /tmp/pr-comment.md
+          echo -e "\n## 💰 Cost Estimate (${{ inputs.environment }})\n\`\`\`\n$(cat /tmp/infracost-table.txt)\n\`\`\`" >> /tmp/pr-comment.md
 
       - name: "Post PR Comment"
         if: github.event.pull_request.number != null || github.event_name == 'pull_request'
@@ -139,12 +139,13 @@ jobs:
           script: |
             const fs = require('fs');
             const body = fs.readFileSync('/tmp/pr-comment.md', 'utf8');
+            const envName = '${{ inputs.environment }}';
             const { data: comments } = await github.rest.issues.listComments({
               owner: context.repo.owner,
               repo: context.repo.repo,
               issue_number: context.issue.number || ${{ github.event.pull_request.number }},
             });
-            const botComment = comments.find(c => c.body.includes('Infrastructure Change Summary'));
+            const botComment = comments.find(c => c.body.includes(`Infrastructure Change Summary (${envName})`));
             
             if (botComment) {
               await github.rest.issues.updateComment({
