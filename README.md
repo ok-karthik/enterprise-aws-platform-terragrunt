@@ -7,10 +7,6 @@
 
 A production-grade, multi-environment AWS platform architecture designed for scalability, security governance, and FinOps efficiency. This project demonstrates **Staff Engineer level patterns** in Infrastructure-as-Code (IaC) management, focusing on modularity, policy-driven security, and automated delivery.
 
-<p align="center">
-  <img src=".github/assets/architecture-infographic.png" width="900" alt="Enterprise Architecture Plan">
-</p>
-
 ---
 
 ## 🏛️ Project Architecture
@@ -21,18 +17,23 @@ This platform follows a **Hierarchical Blueprint Pattern** using Terragrunt. It 
 
 ```text
 .
-├── .github/workflows/          # 🛡️ 5-Stage Multi-Environment Pipeline
-├── infrastructure-modules/      # 📦 The Blueprint Library (Reusable)
-│   ├── network/                # VPC, Transit Gateway, Private Links
-│   ├── compute/                # EKS, Lambda, Auto-scaling
-│   └── data/                   # RDS, S3, OpenSearch
-├── infrastructure-live/         # 🚀 The Deployment Hub (Stateful)
-│   ├── _envcommon/             # 🧬 DRY inheritance layer (Centralized versions)
-│   ├── dev/                    # Development Environment (Low cost, high speed)
-│   │   ├── env.hcl             # Env-specific overrides (Spot instances, logging)
-│   │   └── eu-central-1/        # AWS Region (Frankfurt)
-│   └── prod/                   # Production Environment (High availability)
-└── infrastructure-bootstrap/   # 🗝️ Entry-point (OIDC & Remote State Hub)
+├── infrastructure-modules/      # 📦 Blueprint Library (Reusable Terraform)
+│   ├── network/vpc/            # - Standardized VPC & Subnets
+│   ├── compute/eks/            # - Production-Grade EKS
+│   └── data/s3/                # - Durable Object Storage
+│
+├── infrastructure-live/         # 🚀 Deployment Hub (Environment Config)
+│   ├── _envcommon/             # 🧬 Centralized DRY inheritance layer
+│   ├── dev/ (Regions)          # Sandbox Environment
+│   │   └── eu-central-1/
+│   │       ├── network/vpc/    #   - terragrunt.hcl
+│   │       └── compute/eks/    #   - terragrunt.hcl
+│   └── prod/ (Regions)         # Production Environment
+│       └── eu-central-1/
+│           ├── network/vpc/    #   - terragrunt.hcl
+│           └── compute/eks/    #   - terragrunt.hcl
+│
+└── infrastructure-bootstrap/   # 🗝️ Foundation (OIDC & Remote State Hub)
 ```
 
 ---
@@ -58,22 +59,53 @@ The platform utilizes a **Modular CI/CD Orchestration** model built on GitHub Re
 > **Modular Design:** All tool installations and AWS logins are centralized in a **Local Composite Action**, ensuring that our CI/CD maintenance overhead is near zero.
 
 <p align="center">
-  <img src=".github/assets/infracost-summary.png" width="800" alt="Infracost Report">
+  <img src=".github/assets/pr-reporting-summary.png" width="800" alt="Infracost and Change Summary Report">
 </p>
 
 4.  **🚀 Parallel Planning**: Simultaneous planning across all environment modules for rapid engineering feedback.
 5.  **🚦 Manual Approval Gates**: Environment-protected deployment using GitHub Environments. No code reaches `Dev` or `Prod` without explicit manual review in the Actions UI.
 
-<p align="center">
-  <img src=".github/assets/manual-approval-gate.png" width="800" alt="Manual Approval Gate">
-</p>
-
 > [!TIP]
-> **View our professional PR experience:**
+> **View our professional CI/CD orchestration:**
 >
 > <p align="center">
->   <img src=".github/assets/terragrunt-plan-summary.png" width="600" alt="Consolidated Plan Summary">
+>   <img src=".github/assets/cicd-pipeline-flow.png" width="900" alt="Consolidated CI/CD Pipeline Flow">
 > </p>
+
+---
+
+## 📊 PR-Driven FinOps & Governance
+
+Every Pull Request automatically triggers a comprehensive audit across all environments. This ensures 100% visibility into cost impacts and architectural changes before code reaches production.
+
+### 🛡️ Automated Quality Gates
+- **Cost Estimation (Infracost)**: High-fidelity monthly cost impact per environment.
+- **Change Auditing (tf-summarize)**: Human-readable tables of every resource being Added, Deleted, or Modified.
+- **Security Guardrails**: Automated Checkov and OPA (Open Policy Agent) scans run on every plan.
+
+### 📝 Sample PR Report
+The pipeline posts a consolidated report for each environment (**dev** and **prod**) to the PR conversation. This enables side-by-side comparison of environment-specific costs and resource changes.
+
+<details><summary><b>View Sample PR Report Structure</b></summary>
+
+#### 📊 Infrastructure Change Summary (dev)
+> 💡 This report summarizes resource changes and estimated cost impact for the **dev** environment.
+
+📂 **Module: compute/eks**
+```text
++----------+-----------------------------------------------------------+
+|  CHANGE  |                         RESOURCE                          |
++----------+-----------------------------------------------------------+
+| add (37) | module.eks.aws_eks_cluster.this[0]                        |
+|          | module.eks.module.eks_managed_node_group["spot_nodes"]... |
++----------+-----------------------------------------------------------+
+```
+
+#### 💰 Cost Estimate (dev)
+```text
+ OVERALL TOTAL                                             $124.71 
+```
+</details>
 
 ---
 
@@ -98,11 +130,41 @@ While tools like Checkov handle general security, we use **Open Policy Agent (OP
 
 ## 💰 FinOps & Efficiency
 
+- **Automated PR Cost Auditing**: Every infrastructure change is priced using Infracost before approval, ensuring "Cost as Code" visibility for all engineers.
 - **Spot Instances**: In the `dev` environment, EKS managed node groups are configured for Spot capacity to reduce costs by ~70-90%.
+- **GP3 Storage Mandate**: Automated governance ensures all EBS volumes are provisioned as `gp3` (Amazon Linux 2023), optimizing for both performance and price.
 - **Lifecycle Management**: A dedicated **Manual Teardown Workflow** allows for surgical removal of resources in non-production environments to avoid "hidden" costs when stacks are not in use.
 - **Tagging Policy**: Standardized tagging (`Project`, `Environment`, `Service`) is enforced at the module wrapper level to ensure 100% visibility in AWS Cost Explorer.
 
 ---
+
+## 🛠️ Getting Started
+
+### 📋 Prerequisites
+Before you begin, ensure you have the following tools installed:
+- [Terraform](https://developer.hashicorp.com/terraform/downloads) (v1.5+)
+- [Terragrunt](https://terragrunt.gruntwork.io/docs/getting-started/quick-start/) (v0.50+)
+- [TFLint](https://github.com/terraform-linters/tflint)
+- [Checkov](https://www.checkov.io/1.Getting%20Started/Installation.html)
+- [Infracost](https://www.infracost.io/docs/)
+- [Conftest](https://www.conftest.dev/) (for OPA policy testing)
+
+### 💻 Local Development Setup
+1.  **Clone the Repo**:
+    ```bash
+    git clone https://github.com/ok-karthik/enterprise-aws-platform-terragrunt.git
+    cd enterprise-aws-platform-terragrunt
+    ```
+2.  **Initialize TFLint**:
+    ```bash
+    tflint --init
+    ```
+3.  **Local Validation**:
+    Run the Gate 1 checks locally to catch issues early:
+    ```bash
+    tflint --recursive
+    checkov -d .
+    ```
 
 ## 🛠️ Deployment Instructions
 
@@ -110,6 +172,19 @@ While tools like Checkov handle general security, we use **Open Policy Agent (OP
 2.  **Development**: Merge your infrastructure changes to a feature branch. Review the `Consolidated Report` in the PR.
 3.  **Production**: Merge to `main`. The pipeline will pause for your manual approval before applying changes to the `prod` environment.
 
+## 🧠 Development Approach
+
+Selective AI assistance was used for accelerating documentation and validating CI/CD patterns. All architectural decisions, directory structure, and engineering tradeoffs were designed and reviewed independently to ensure enterprise-grade stability.
+
+---
+
+## 🤝 Contributing
+Contributions are welcome! Please ensure any new modules include:
+- TFLint validation
+- Checkov-compliant HCL
+- OPA-compliant tagging
+
 ---
 
 *This platform is maintained as a showcase of senior Platform Engineering patterns. For inquiries, please reach out to [ok-karthik](https://github.com/ok-karthik).*
+

@@ -1,0 +1,164 @@
+name: 'Reusable Terragrunt Component'
+
+on:
+  workflow_call:
+    inputs:
+      environment:
+        required: true
+        type: string
+      working_directory:
+        required: true
+        type: string
+    secrets:
+      INFRACOST_API_KEY:
+        required: false
+
+permissions:
+  id-token: write
+  contents: read
+  pull-requests: write
+
+jobs:
+  plan:
+    name: "📝 Plan: ${{ inputs.environment }}"
+    runs-on: ubuntu-latest
+    steps:
+      - name: "Git Checkout"
+        uses: actions/checkout@v5
+
+      - name: "Setup Platform"
+        uses: ./.github/actions/setup-platform
+        with:
+          aws_region: ${{ vars.AWS_REGION }}
+          aws_role_arn: ${{ vars.AWS_ROLE_ARN }}
+
+      - name: "Disaster Recovery (Smoke Test)"
+        run: ./infrastructure-live/scripts/smoke-test.sh
+
+      - name: "Terragrunt Plan"
+        run: |
+          # 1. Generate binary plans
+          terragrunt run --all plan --non-interactive -no-color -- -out=tfplan.bin
+          
+          # 2. Convert to JSON (searching inside .terragrunt-cache)
+          echo "🔍 Converting binary plans to JSON..."
+          find . -name "tfplan.bin" | while read -r plan_path; do
+            dir_path=$(dirname "$plan_path")
+            module_path=$(echo "$dir_path" | sed 's/\/\.terragrunt-cache.*//')
+            echo "Processing module: $module_path"
+            (cd "$dir_path" && terraform show -json tfplan.bin > tfplan.json)
+            mv "$dir_path/tfplan.json" "$module_path/tfplan.json"
+          done
+        working-directory: ${{ inputs.working_directory }}
+
+      - name: "Debug: List Plans"
+        run: find ${{ inputs.working_directory }} -name "tfplan.json"
+
+      - name: "Upload Plans"
+        uses: actions/upload-artifact@v5
+        with:
+          name: "plans-${{ inputs.environment }}"
+          path: "${{ inputs.working_directory }}/**/tfplan.json"
+          if-no-files-found: error
+          retention-days: 1
+
+  security-governance:
+    name: "⚖️ Security & Governance (OPA/Checkov): ${{ inputs.environment }}"
+    needs: [plan]
+    runs-on: ubuntu-latest
+    steps:
+      - name: "Git Checkout"
+        uses: actions/checkout@v5
+
+      - name: "Setup Platform"
+        uses: ./.github/actions/setup-platform
+
+      - name: "Download Plans"
+        uses: actions/download-artifact@v5
+        with:
+          name: "plans-${{ inputs.environment }}"
+          path: plans
+
+      - name: "OPA Policy Gate (Conftest)"
+        run: find plans -name "*.json" -print0 | xargs -0 conftest test --policy policies/terraform
+
+      - name: "Checkov Security Audit"
+        run: find plans -name "tfplan.json" -exec checkov -f {} --config-file .checkov.yaml \;
+
+  cost-analysis:
+    name: "💰 Cost Analysis (Infracost): ${{ inputs.environment }}"
+    needs: [plan]
+    runs-on: ubuntu-latest
+    steps:
+      - name: "Git Checkout"
+        uses: actions/checkout@v5
+
+      - name: "Setup Platform"
+        uses: ./.github/actions/setup-platform
+
+      - name: "Setup Infracost"
+        uses: infracost/actions/setup@v4
+        with:
+          api-key: ${{ secrets.INFRACOST_API_KEY }}
+
+      - name: "Download Plans"
+        uses: actions/download-artifact@v5
+        with:
+          name: "plans-${{ inputs.environment }}"
+          path: plans
+
+      - name: "Generate FinOps Summary"
+        run: |
+          # 1. Cost Breakdown (CLI only)
+          find plans -name "tfplan.json" | while read -r plan; do
+            unique_name=$(echo "$plan" | tr '/' '-')
+            infracost breakdown --path "$plan" --format json --out-file "cost-${unique_name}.json"
+          done
+          infracost output --path "cost-*.json" --format table --out-file /tmp/infracost-table.txt
+
+          # 2. Change Summary (tf-summarize)
+          echo "## 📊 Infrastructure Change Summary (${{ inputs.environment }})" > /tmp/pr-comment.md
+          echo "> 💡 This report summarizes resource changes and estimated cost impact for the **${{ inputs.environment }}** environment." >> /tmp/pr-comment.md
+          
+          find plans -name "tfplan.json" | while read -r plan; do
+            module_name=$(dirname $plan | sed 's|plans/||')
+            echo -e "\n<details><summary><b>📂 Module: ${module_name}</b></summary>\n" >> /tmp/pr-comment.md
+            echo "\`\`\`" >> /tmp/pr-comment.md
+            tf-summarize "$plan" >> /tmp/pr-comment.md
+            echo "\`\`\`" >> /tmp/pr-comment.md
+            echo -e "\n</details>" >> /tmp/pr-comment.md
+          done
+
+          # 3. Append Cost Table
+          echo -e "\n## 💰 Cost Estimate (${{ inputs.environment }})\n\`\`\`\n$(cat /tmp/infracost-table.txt)\n\`\`\`" >> /tmp/pr-comment.md
+
+      - name: "Post PR Comment"
+        if: github.event.pull_request.number != null || github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const body = fs.readFileSync('/tmp/pr-comment.md', 'utf8');
+            const envName = '${{ inputs.environment }}';
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number || ${{ github.event.pull_request.number }},
+            });
+            const botComment = comments.find(c => c.body.includes(`Infrastructure Change Summary (${envName})`));
+            
+            if (botComment) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: botComment.id,
+                body: body
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number || ${{ github.event.pull_request.number }},
+                body: body
+              });
+            }

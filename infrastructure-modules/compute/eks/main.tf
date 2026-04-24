@@ -23,6 +23,7 @@ module "eks" {
   # Every cluster in the organization uses Spot Managed Node Groups to save costs.
   eks_managed_node_groups = {
     spot_nodes = {
+      ami_type       = "AL2023_x86_64_STANDARD"
       instance_types = var.instance_types
       capacity_type  = "SPOT"
 
@@ -34,15 +35,12 @@ module "eks" {
       use_custom_launch_template = true
       disk_size                  = null
 
-      # --- FINOPS: Explicit GP3 Modernization ---
       block_device_mappings = {
         xvda = {
           device_name = "/dev/xvda"
           ebs = {
             volume_size           = 20
             volume_type           = "gp3"
-            iops                  = 3000
-            throughput            = 125
             delete_on_termination = true
           }
         }
@@ -56,7 +54,7 @@ module "eks" {
       ManagedBy     = "Terragrunt-Wrapper"
       SecurityLevel = "High"
       K8sAccess     = "IAM-Only"
-      Service       = "compute-eks"  # Required by FinOps tag policy
+      Service       = "compute-eks" # Required by FinOps tag policy
     },
     var.tags
   )

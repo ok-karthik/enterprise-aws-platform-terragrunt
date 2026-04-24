@@ -2,5 +2,6 @@
 **/.terraform
 **/terraform.tfstate
 **/terraform.tfstate.backup
-**/.terragrunt-cache
-**/.terragrunt-config-cache
+**/.terragrunt-cache/
+**/.terragrunt-config-cache/
+.external_modules/

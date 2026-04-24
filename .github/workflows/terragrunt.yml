@@ -1,4 +1,5 @@
 name: 'Terragrunt CI/CD'
+# Trigger jumpstart: 2026-04-23
 
 on:
   push:
@@ -18,19 +19,30 @@ env:
 
 jobs:
   # ─────────────────────────────────────────────────────────────
-  # Gate 1: Static Analysis
+  # Gate 1: High-Speed Static Analysis (TFLint/Checkov)
   # ─────────────────────────────────────────────────────────────
   static-analysis:
-    name: '🔍 Static: TFLint & Checkov'
+    name: '🔍 Static Analysis (TFLint/Checkov)'
     runs-on: ubuntu-latest
     steps:
-      - name: Git Checkout
+      - name: "Git Checkout"
         uses: actions/checkout@v5
 
-      - name: Setup Platform
+      - name: "Setup Platform"
         uses: ./.github/actions/setup-platform
 
-      - name: Run TFLint
+      - name: "Check HCL Formatting"
+        run: |
+          terraform fmt -check -recursive infrastructure-modules
+          terraform fmt -check -recursive infrastructure-live
+          terraform fmt -check -recursive infrastructure-bootstrap
+          terraform fmt -check -recursive policies
+
+      - name: "Terraform Validate"
+        run: |
+          find infrastructure-modules -maxdepth 2 -name "main.tf" -exec sh -c 'cd $(dirname {}) && terraform init -backend=false && terraform validate' \;
+
+      - name: "Run TFLint"
         run: |
           tflint --init
           tflint --chdir=infrastructure-modules --recursive --format=compact
@@ -38,149 +50,37 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ github.token }}
 
-      - name: Run Checkov (Static HCL)
+      - name: "Run Checkov (Static HCL)"
         uses: bridgecrewio/checkov-action@v12
         with:
           config_file: .checkov.yaml
           soft_fail: false
 
+      - name: "License Compliance Check"
+        run: ./infrastructure-live/scripts/check-licenses.sh
+
   # ─────────────────────────────────────────────────────────────
-  # Gate 2: Multi-Environment Planning
+  # Gate 2-4: Multi-Environment Orchestration (Reusable)
   # ─────────────────────────────────────────────────────────────
-  plan-dev:
-    name: '📝 Plan: Dev'
+  dev-stack:
+    name: 'Dev'
     needs: [static-analysis]
-    runs-on: ubuntu-latest
-    steps:
-      - name: Git Checkout
-        uses: actions/checkout@v5
+    uses: ./.github/workflows/reusable-terragrunt.yml
+    with:
+      environment: 'dev'
+      working_directory: 'infrastructure-live/dev'
+    secrets:
+      INFRACOST_API_KEY: ${{ secrets.INFRACOST_API_KEY }}
 
-      - name: Setup Platform
-        uses: ./.github/actions/setup-platform
-        with:
-          aws_region: ${{ env.AWS_REGION }}
-          aws_role_arn: ${{ vars.AWS_ROLE_ARN }}
-
-      - name: Terragrunt Plan (All)
-        run: |
-          # Terragrunt 1.x requires '--' for passthrough flags like -out
-          terragrunt run --all plan --non-interactive -no-color -- -out=tfplan.bin
-          # Convert all binary plans to JSON - MUST CD into module dir first
-          # We prune .terragrunt-cache to avoid processing internal cache files
-          find . -name ".terragrunt-cache" -prune -o -name "tfplan.bin" -print0 | xargs -0 -I {} sh -c 'cd $(dirname "{}") && terragrunt show -json tfplan.bin > tfplan.json'
-        working-directory: infrastructure-live/dev
-
-      - name: Bundle Artifacts
-        run: |
-          mkdir -p dist
-          find . -name "tfplan.json" | cpio -pdm dist
-
-      - name: Upload Plans
-        uses: actions/upload-artifact@v5
-        with:
-          name: plans-dev
-          path: dist/
-          retention-days: 1
-
-  plan-prod:
-    name: '📝 Plan: Prod'
+  prod-stack:
+    name: 'Prod'
     needs: [static-analysis]
-    runs-on: ubuntu-latest
-    steps:
-      - name: Git Checkout
-        uses: actions/checkout@v5
-
-      - name: Setup Platform
-        uses: ./.github/actions/setup-platform
-        with:
-          aws_region: ${{ env.AWS_REGION }}
-          aws_role_arn: ${{ vars.AWS_ROLE_ARN }}
-
-      - name: Terragrunt Plan (All)
-        run: |
-          # Terragrunt 1.x requires '--' for passthrough flags like -out
-          terragrunt run --all plan --non-interactive -no-color -- -out=tfplan.bin
-          # Convert all binary plans to JSON - MUST CD into module dir first
-          # We prune .terragrunt-cache to avoid processing internal cache files
-          find . -name ".terragrunt-cache" -prune -o -name "tfplan.bin" -print0 | xargs -0 -I {} sh -c 'cd $(dirname "{}") && terragrunt show -json tfplan.bin > tfplan.json'
-        working-directory: infrastructure-live/prod
-
-      - name: Bundle Artifacts
-        run: |
-          mkdir -p dist
-          find . -name "tfplan.json" | cpio -pdm dist
-
-      - name: Upload Plans
-        uses: actions/upload-artifact@v5
-        with:
-          name: plans-prod
-          path: dist/
-          retention-days: 1
-
-  # ─────────────────────────────────────────────────────────────
-  # Gate 3: Audit (Parallel Policy & Security)
-  # ─────────────────────────────────────────────────────────────
-  governance:
-    name: '⚖️ Policy: OPA Conftest'
-    if: github.event_name == 'pull_request'
-    needs: [plan-dev, plan-prod]
-    runs-on: ubuntu-latest
-    steps:
-      - name: Git Checkout
-        uses: actions/checkout@v5
-
-      - name: Setup Platform
-        uses: ./.github/actions/setup-platform
-
-      - name: Download All Plans
-        uses: actions/download-artifact@v5
-        with:
-          path: plans
-
-      - name: Run OPA Policy Gate
-        run: |
-          echo "Running OPA Governance check on all plan modules..."
-          # Search everywhere for json plans to be path-agnostic
-          find . -name "*.json" -print0 | xargs -0 conftest test --policy policies/terraform
-
-      - name: Run Checkov Security Gate
-        run: |
-          echo "Running Checkov Plan Audit..."
-          # Search everywhere for tfplan.json to be path-agnostic
-          find . -name "tfplan.json" -exec checkov -f {} --config-file .checkov.yaml \;
-
-  # ─────────────────────────────────────────────────────────────
-  # Gate 4: FinOps (Parallel Cost Audit)
-  # ─────────────────────────────────────────────────────────────
-  finops:
-    name: '💰 FinOps: Infracost'
-    if: github.event_name == 'pull_request'
-    needs: [plan-dev, plan-prod]
-    runs-on: ubuntu-latest
-    steps:
-      - name: Git Checkout
-        uses: actions/checkout@v5
-
-      - name: Setup Infracost
-        uses: infracost/actions/setup@v4
-        with:
-          api-key: ${{ secrets.INFRACOST_API_KEY }}
-
-      - name: Generate Cost Estimate
-        run: |
-          infracost breakdown --path . \
-                             --format json \
-                             --out-file /tmp/infracost.json
-
-      - name: Post Cost Comment
-        run: |
-          set +e
-          infracost comment github --path /tmp/infracost.json \
-                                   --repo $GITHUB_REPOSITORY \
-                                   --github-token ${{ github.token }} \
-                                   --pull-request ${{ github.event.pull_request.number }} \
-                                   --behavior update
-          exit 0
+    uses: ./.github/workflows/reusable-terragrunt.yml
+    with:
+      environment: 'prod'
+      working_directory: 'infrastructure-live/prod'
+    secrets:
+      INFRACOST_API_KEY: ${{ secrets.INFRACOST_API_KEY }}
 
   # ─────────────────────────────────────────────────────────────
   # Phase 5: Deployment (Compliance-First Promotion)
@@ -188,42 +88,39 @@ jobs:
   apply-dev:
     name: '🚀 Apply: Dev'
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    # MANDATORY GATING: Deployments MUST have passed Governance and FinOps in the PR phase
-    # In push mode, we depend on the plan which is the root of the push chain
-    needs: [plan-dev, governance, finops] 
+    needs: [dev-stack]
     runs-on: ubuntu-latest
     environment: dev
     steps:
-      - name: Git Checkout
+      - name: "Git Checkout"
         uses: actions/checkout@v5
 
-      - name: Setup Platform
+      - name: "Setup Platform"
         uses: ./.github/actions/setup-platform
         with:
           aws_region: ${{ env.AWS_REGION }}
           aws_role_arn: ${{ vars.AWS_ROLE_ARN }}
 
-      - name: Terragrunt Apply
+      - name: "Terragrunt Apply"
         run: terragrunt run --all apply --non-interactive -auto-approve
         working-directory: infrastructure-live/dev
 
   apply-prod:
     name: '🚀 Apply: Prod'
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    # Total compliance chain from dev to prod
-    needs: [apply-dev, plan-prod, governance, finops]
+    needs: [apply-dev, prod-stack]
     runs-on: ubuntu-latest
     environment: prod
     steps:
-      - name: Git Checkout
+      - name: "Git Checkout"
         uses: actions/checkout@v5
 
-      - name: Setup Platform
+      - name: "Setup Platform"
         uses: ./.github/actions/setup-platform
         with:
           aws_region: ${{ env.AWS_REGION }}
           aws_role_arn: ${{ vars.AWS_ROLE_ARN }}
 
-      - name: Terragrunt Apply
+      - name: "Terragrunt Apply"
         run: terragrunt run --all apply --non-interactive -auto-approve
         working-directory: infrastructure-live/prod
