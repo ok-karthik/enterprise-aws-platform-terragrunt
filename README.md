@@ -63,22 +63,53 @@ The platform utilizes a **Modular CI/CD Orchestration** model built on GitHub Re
 > **Modular Design:** All tool installations and AWS logins are centralized in a **Local Composite Action**, ensuring that our CI/CD maintenance overhead is near zero.
 
 <p align="center">
-  <img src=".github/assets/infracost-summary.png" width="800" alt="Infracost Report">
+  <img src=".github/assets/pr-reporting-summary.png" width="800" alt="Infracost and Change Summary Report">
 </p>
 
 4.  **🚀 Parallel Planning**: Simultaneous planning across all environment modules for rapid engineering feedback.
 5.  **🚦 Manual Approval Gates**: Environment-protected deployment using GitHub Environments. No code reaches `Dev` or `Prod` without explicit manual review in the Actions UI.
 
-<p align="center">
-  <img src=".github/assets/manual-approval-gate.png" width="800" alt="Manual Approval Gate">
-</p>
-
 > [!TIP]
-> **View our professional PR experience:**
+> **View our professional CI/CD orchestration:**
 >
 > <p align="center">
->   <img src=".github/assets/terragrunt-plan-summary.png" width="600" alt="Consolidated Plan Summary">
+>   <img src=".github/assets/cicd-pipeline-flow.png" width="900" alt="Consolidated CI/CD Pipeline Flow">
 > </p>
+
+---
+
+## 📊 PR-Driven FinOps & Governance
+
+Every Pull Request automatically triggers a comprehensive audit across all environments. This ensures 100% visibility into cost impacts and architectural changes before code reaches production.
+
+### 🛡️ Automated Quality Gates
+- **Cost Estimation (Infracost)**: High-fidelity monthly cost impact per environment.
+- **Change Auditing (tf-summarize)**: Human-readable tables of every resource being Added, Deleted, or Modified.
+- **Security Guardrails**: Automated Checkov and OPA (Open Policy Agent) scans run on every plan.
+
+### 📝 Sample PR Report
+The pipeline posts a consolidated report for each environment (**dev** and **prod**) to the PR conversation. This enables side-by-side comparison of environment-specific costs and resource changes.
+
+<details><summary><b>View Sample PR Report Structure</b></summary>
+
+#### 📊 Infrastructure Change Summary (dev)
+> 💡 This report summarizes resource changes and estimated cost impact for the **dev** environment.
+
+📂 **Module: compute/eks**
+```text
++----------+-----------------------------------------------------------+
+|  CHANGE  |                         RESOURCE                          |
++----------+-----------------------------------------------------------+
+| add (37) | module.eks.aws_eks_cluster.this[0]                        |
+|          | module.eks.module.eks_managed_node_group["spot_nodes"]... |
++----------+-----------------------------------------------------------+
+```
+
+#### 💰 Cost Estimate (dev)
+```text
+ OVERALL TOTAL                                             $124.71 
+```
+</details>
 
 ---
 
@@ -103,7 +134,9 @@ While tools like Checkov handle general security, we use **Open Policy Agent (OP
 
 ## 💰 FinOps & Efficiency
 
+- **Automated PR Cost Auditing**: Every infrastructure change is priced using Infracost before approval, ensuring "Cost as Code" visibility for all engineers.
 - **Spot Instances**: In the `dev` environment, EKS managed node groups are configured for Spot capacity to reduce costs by ~70-90%.
+- **GP3 Storage Mandate**: Automated governance ensures all EBS volumes are provisioned as `gp3` (Amazon Linux 2023), optimizing for both performance and price.
 - **Lifecycle Management**: A dedicated **Manual Teardown Workflow** allows for surgical removal of resources in non-production environments to avoid "hidden" costs when stacks are not in use.
 - **Tagging Policy**: Standardized tagging (`Project`, `Environment`, `Service`) is enforced at the module wrapper level to ensure 100% visibility in AWS Cost Explorer.
 
