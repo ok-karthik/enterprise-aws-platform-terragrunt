@@ -1,6 +1,6 @@
 # 🏗️ Enterprise AWS Infrastructure (Terragrunt & Terraform)
 
-[![Terragrunt](https://img.shield.io/badge/Infrastructure-Terragrunt-blue)](https://terragrunt.gruntwork.io/)
+[![Terragrunt](https://img.shields.io/badge/Infrastructure-Terragrunt-blue)](https://terragrunt.gruntwork.io/)
 [![Terraform](https://img.shields.io/badge/IaC-Terraform-623CE4)](https://www.terraform.io/)
 [![Security: OPA](https://img.shields.io/badge/Policy-OPA-F7931E)](https://www.openpolicyagent.org/)
 [![FinOps: Infracost](https://img.shields.io/badge/FinOps-Infracost-0080FF)](https://www.infracost.io/)
