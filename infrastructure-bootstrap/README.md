@@ -4,7 +4,20 @@ This directory contains the "Pre-CI/CD" infrastructure required to stand up the 
 
 ## 🏗️ Bootstrapping Order
 
-To initialize the enterprise platform, deploy these components in order:
+To initialize the enterprise platform, you can use the **guided automation script** or follow the manual steps below:
+
+### ⚡ Guided Bootstrap (Recommended)
+We provide a script that automates the deployment and provides direct instructions for GitHub:
+```bash
+cd infrastructure-bootstrap
+chmod +x bootstrap.sh
+./bootstrap.sh
+```
+
+---
+
+### 📖 Manual Bootstrap Steps
+If you prefer to run things manually, deploy these components in order:
 
 ### 1. OIDC Identity Trust (Global)
 - **Purpose**: Establishes OIDC trust between AWS and GitHub. This allows the CI/CD pipeline to assume IAM roles without using long-lived Access Keys.

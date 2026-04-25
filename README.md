@@ -1,4 +1,4 @@
-# 🏗️ Enterprise AWS Platform (Terragrunt & Terraform)
+# 🏗️ Enterprise AWS Infrastructure (Terragrunt & Terraform)
 
 [![Terragrunt](https://img.shields.io/badge/Infrastructure-Terragrunt-blue)](https://terragrunt.gruntwork.io/)
 [![Terraform](https://img.shields.io/badge/IAC-Terraform-blueviolet)](https://www.terraform.io/)
@@ -244,7 +244,7 @@ This section provides actionable instructions for maintaining and expanding the 
 The platform is optimized for **Terragrunt v1.x (HCL v2)**. Key patterns used:
 - **`find_in_parent_folders()`**: For hierarchical configuration inheritance.
 *   **`read_terragrunt_config()`**: For loading variables from sibling `.hcl` files.
-- **`validation` blocks**: Catch misconfigurations (like invalid regions or environment names) before running Terraform.
+- **Automated Compliance Checks**: Catch misconfigurations (like invalid regions or environment names) in Gate 0 before running Terraform.
 - **`get_repo_root()`**: Ensures absolute paths are resolved correctly across all execution environments.
 
 ---
@@ -270,5 +270,5 @@ The platform utilizes **GitHub Environments** to enforce manual approval gates b
 
 ---
 
-*This platform is maintained as a showcase of senior Platform Engineering patterns. For inquiries, please reach out to [ok-karthik](https://github.com/ok-karthik).*
+*This platform is maintained as a showcase of Infrastructure-as-Code (IaC) Engineering patterns. For inquiries, please reach out to [ok-karthik](https://github.com/ok-karthik).*
 
