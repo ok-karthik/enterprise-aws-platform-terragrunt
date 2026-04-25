@@ -1,15 +1,13 @@
 # 🏗️ Enterprise AWS Infrastructure (Terragrunt & Terraform)
 
-A production-grade, multi-environment AWS platform built with Terragrunt, OIDC, and CI/CD-driven governance — fully DRY, observable, and cost-optimized.
-
-[![Terragrunt](https://img.shields.io/badge/Infrastructure-Terragrunt-blue)](https://terragrunt.gruntwork.io/)
+[![Terragrunt](https://img.shield.io/badge/Infrastructure-Terragrunt-blue)](https://terragrunt.gruntwork.io/)
 [![Terraform](https://img.shields.io/badge/IaC-Terraform-623CE4)](https://www.terraform.io/)
 [![Security: OPA](https://img.shields.io/badge/Policy-OPA-F7931E)](https://www.openpolicyagent.org/)
 [![FinOps: Infracost](https://img.shields.io/badge/FinOps-Infracost-0080FF)](https://www.infracost.io/)
 [![Security: Checkov](https://img.shields.io/badge/Security-Checkov-20B2AA)](https://www.checkov.io/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
-A production-grade, multi-environment AWS platform architecture designed for scalability, security governance, and FinOps efficiency. This project demonstrates **Staff Engineer level patterns** in Infrastructure-as-Code (IaC) management, focusing on modularity, policy-driven security, and automated delivery.
+A production-grade, multi-environment AWS infrastructure blueprint designed for scalability, security governance, and FinOps efficiency. This project demonstrates **Staff Engineer level patterns** in Infrastructure-as-Code (IaC) management—fully DRY, observable, and automated for high-scale engineering teams.
 
 ---
 
