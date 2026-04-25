@@ -51,6 +51,11 @@ jobs:
     needs: [discover]
     if: github.event.inputs.confirm_destruction == 'DESTROY'
     runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/ok-karthik/infrastructure-toolchain:feature-improvements
+      credentials:
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
     timeout-minutes: 40
     environment: ${{ github.event.inputs.environment }}
     steps:
