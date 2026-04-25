@@ -224,6 +224,7 @@ For deeper reading see the official docs:
 
 ## 📚 Related Standards & Inspiration
 This platform is built upon industry-neutral standards for cloud scale:
+- [AWS Well-Architected Framework](https://aws.amazon.com/architecture/well-architected/)
 - [CNCF Cloud Native Interactive Landscape](https://landscape.cncf.io/)
 - [GitHub Platform Engineering Playbook](https://github.com/github/platform-samples)
 - [HashiCorp Well-Architected Framework](https://developer.hashicorp.com/terraform/tutorials/best-practices/well-architected-framework)
