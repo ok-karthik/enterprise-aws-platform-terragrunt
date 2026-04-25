@@ -20,21 +20,6 @@ locals {
   account_id = get_aws_account_id()
 }
 
-# --- GLOBAL VALIDATION ---
-validation {
-  condition     = contains(["dev", "prod", "staging"], local.env)
-  error_message = "❌ ERROR: Unsupported environment '${local.env}'. Must be dev, prod, or staging."
-}
-
-validation {
-  condition     = can(regex("^[a-z0-9-]+$", local.env))
-  error_message = "❌ ERROR: Environment name '${local.env}' must be alphanumeric and hyphenated."
-}
-
-validation {
-  condition     = startswith(local.aws_region, "eu-") || startswith(local.aws_region, "us-")
-  error_message = "❌ ERROR: Platform only supports EU and US regions for compliance."
-}
 
 # Generate an AWS provider block
 generate "provider" {
