@@ -61,7 +61,7 @@ jobs:
         uses: ./.github/actions/setup-platform
         with:
           aws_region: ${{ env.AWS_REGION }}
-          aws_role_arn: ${{ vars.AWS_ROLE_ARN }}
+          aws_role_arn: ${{ github.event.inputs.environment == 'dev' && vars.AWS_DEV_ROLE_ARN || vars.AWS_PROD_ROLE_ARN }}
 
       - name: Terragrunt Destroy (Sequential)
         run: |
