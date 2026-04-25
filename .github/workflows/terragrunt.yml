@@ -30,6 +30,11 @@ jobs:
   static-analysis:
     name: '🔍 Static Analysis (TFLint/Checkov)'
     runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/ok-karthik/infrastructure-toolchain:feature-improvements
+      credentials:
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
     timeout-minutes: 10
     steps:
       - name: "Git Checkout"
@@ -74,6 +79,11 @@ jobs:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     needs: [dev-stack]
     runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/ok-karthik/infrastructure-toolchain:feature-improvements
+      credentials:
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
     timeout-minutes: 30
     environment: dev
     steps:
@@ -95,6 +105,11 @@ jobs:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     needs: [apply-dev, prod-stack]
     runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/ok-karthik/infrastructure-toolchain:feature-improvements
+      credentials:
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
     timeout-minutes: 30
     environment: prod
     steps:
