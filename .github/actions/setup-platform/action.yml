@@ -36,6 +36,9 @@ runs:
       shell: bash
       run: |
         echo "🔍 Validating inputs..."
+        # Fix for 'dubious ownership' when running git in a container
+        git config --global --add safe.directory '*'
+        
         if [[ -n "${{ inputs.aws_role_arn }}" ]] && [[ -z "${{ inputs.aws_region }}" ]]; then
           echo "❌ ERROR: aws_region is required when aws_role_arn is provided."
           exit 1
