@@ -1,25 +1,46 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
   "extends": [
-    "config:recommended"
+    "config:recommended",
+    ":separateMajorReleases",
+    ":combinePatchMinorReleases",
+    "group:monorepos",
+    "group:recommended"
   ],
   "enabledManagers": [
     "terragrunt",
     "terraform",
-    "github-actions"
+    "github-actions",
+    "regex"
+  ],
+  "description": "Enterprise-grade Renovate config for Terragrunt/Terraform infrastructure",
+  "regexManagers": [
+    {
+      "description": "Track tool versions in GitHub Actions inputs",
+      "fileMatch": ["^\\.github/actions/.+/action\\.yml$"],
+      "matchStrings": [
+        "default: '(?<currentValue>.*)'\\s+# renovate: datasource=(?<datasource>.*) depName=(?<depName>.*)( versioning=(?<versioning>.*))?"
+      ],
+      "versioningTemplate": "{{#if versioning}}{{versioning}}{{else}}semver{{/if}}"
+    }
   ],
   "packageRules": [
     {
+      "matchManagers": ["terraform", "terragrunt"],
       "matchUpdateTypes": ["minor", "patch"],
-      "matchCurrentVersion": "!/^0/",
-      "automerge": false
+      "groupName": "Infrastructure Dependencies (Non-Major)"
     },
     {
-      "description": "Group all terraform-aws-modules together",
       "matchSourceUrlPrefixes": ["https://github.com/terraform-aws-modules/"],
-      "groupName": "terraform-aws-modules"
+      "groupName": "AWS Official Modules"
+    },
+    {
+      "matchPackageNames": ["hashicorp/terraform", "gruntwork-io/terragrunt"],
+      "groupName": "Core IaC Tools"
     }
   ],
   "timezone": "Europe/Berlin",
-  "schedule": ["at any time"]
+  "schedule": ["at any time"],
+  "prConcurrentLimit": 5,
+  "prHourlyLimit": 0
 }
