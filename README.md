@@ -75,7 +75,7 @@ Project: .../compute/eks/tfplan.json
 
 > [!TIP]
 > **View a live example of our automated PR audits:**
-> [Live PR Review & Cost Analysis #7](https://github.com/ok-karthik/enterprise-aws-platform-terragrunt/pull/7#issuecomment-2804241908)
+> [Live PR Review & Cost Analysis #7](https://github.com/ok-karthik/enterprise-aws-infrastructure-terragrunt/pull/7#issuecomment-2804241908)
 
 4.  **🚀 Parallel Planning**: Simultaneous planning across all environment modules for rapid engineering feedback.
 5.  **🚦 Manual Approval Gates**: Environment-protected deployment using GitHub Environments. No code reaches `Dev` or `Prod` without explicit manual review in the Actions UI.
@@ -191,8 +191,8 @@ Before you begin, ensure you have the following tools installed:
 ### 💻 Local Development Setup
 1.  **Clone the Repo**:
     ```bash
-    git clone https://github.com/ok-karthik/enterprise-aws-platform-terragrunt.git
-    cd enterprise-aws-platform-terragrunt
+    git clone https://github.com/ok-karthik/enterprise-aws-infrastructure-terragrunt.git
+    cd enterprise-aws-infrastructure-terragrunt
     ```
 2.  **Initialize TFLint**:
     ```bash
