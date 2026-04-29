@@ -11,11 +11,12 @@
     "terragrunt",
     "terraform",
     "github-actions",
-    "regex"
+    "custom.regex"
   ],
   "description": "Enterprise-grade Renovate config for Terragrunt/Terraform infrastructure",
-  "regexManagers": [
+  "customManagers": [
     {
+      "customType": "regex",
       "description": "Track tool versions in GitHub Actions inputs",
       "fileMatch": ["^\\.github/actions/.+/action\\.yml$"],
       "matchStrings": [
@@ -24,6 +25,7 @@
       "versioningTemplate": "{{#if versioning}}{{versioning}}{{else}}semver{{/if}}"
     },
     {
+      "customType": "regex",
       "description": "Track tool versions in Dockerfile ARGs",
       "fileMatch": ["(^|/)Dockerfile$"],
       "matchStrings": [
@@ -32,6 +34,7 @@
       "versioningTemplate": "{{#if versioning}}{{versioning}}{{else}}semver{{/if}}"
     },
     {
+      "customType": "regex",
       "description": "Track Terragrunt registry modules (tfr:// protocol)",
       "fileMatch": ["(^|/)terragrunt\\.hcl$"],
       "matchStrings": [
