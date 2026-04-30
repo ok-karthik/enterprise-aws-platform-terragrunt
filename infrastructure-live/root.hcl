@@ -59,13 +59,11 @@ remote_state {
     region       = "${local.aws_region}"
     encrypt      = true
     use_lockfile = true
-  }
 
-  # --- SECURITY: Hardening the State Bucket ---
-  # These properties are used by Terragrunt to CONFIGURE the bucket itself,
-  # but they are NOT passed to the terraform backend block.
-  s3_bucket_properties = {
-    versioning = true
+    # --- SECURITY: Hardening the State Bucket ---
+    # These keys are used by Terragrunt to CONFIGURE the bucket itself.
+    # Terragrunt automatically filters these out from the generated backend.tf.
+    versioning              = true
     block_public_acls       = true
     block_public_policy     = true
     ignore_public_acls      = true
