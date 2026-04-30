@@ -47,7 +47,7 @@ RUN ARCH=$(uname -m | sed 's/x86_64/amd64/' | sed 's/aarch64/arm64/') && \
     mv tf-summarize /usr/local/bin/
 
 # 6. Install Trivy
-RUN ARCH=$(uname -m | sed 's/x86_64/64bit/' | sed 's/aarch64/ARM64/') && \
+RUN ARCH=$(uname -m | sed 's/x86_64/64bit/' | sed 's/arm64/ARM64/' | sed 's/aarch64/ARM64/') && \
     curl -sfL "https://github.com/aquasecurity/trivy/releases/download/v${TRIVY_VERSION}/trivy_${TRIVY_VERSION}_Linux-${ARCH}.tar.gz" -o trivy.tar.gz && \
     tar -xzf trivy.tar.gz && \
     mv trivy /usr/local/bin/
