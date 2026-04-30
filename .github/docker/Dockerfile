@@ -2,7 +2,7 @@
 ARG TRIVY_VERSION=0.59.1
 
 # 1. Define Trivy source stage (supports variables)
-FROM ghcr.io/aquasecurity/trivy:v${TRIVY_VERSION} AS trivy_source
+FROM public.ecr.aws/aquasecurity/trivy:${TRIVY_VERSION} AS trivy_source
 
 # --- TOOLCHAIN BUILDER ---
 FROM debian:bookworm-slim AS builder
