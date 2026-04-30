@@ -38,13 +38,14 @@ runs:
         GITHUB_TOKEN: ${{ github.token }}
 
     - name: Run Trivy Scan (Security)
-      uses: aquasecurity/trivy-action@v0.36.0
-      with:
-        scan-type: 'config'
-        hide-progress: false
-        format: 'sarif'
-        output: 'trivy-results.sarif'
-        severity: 'CRITICAL,HIGH'
+      shell: bash
+      run: |
+        echo "🛡️ Running Trivy scan..."
+        trivy config . \
+          --severity CRITICAL,HIGH \
+          --format sarif \
+          --output trivy-results.sarif \
+          --ignorefile .trivyignore
 
     - name: License Compliance Check
       shell: bash

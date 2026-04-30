@@ -111,13 +111,12 @@ jobs:
         run: cp .trivyignore plans/.trivyignore
 
       - name: "Trivy Security Scan (Plan)"
-        uses: aquasecurity/trivy-action@v0.36.0
-        with:
-          scan-type: "config"
-          scan-ref: "plans/"
-          severity: "CRITICAL,HIGH"
-          format: "sarif"
-          output: "trivy-results-${{ inputs.environment }}.sarif"
+        run: |
+          trivy config plans/ \
+            --severity CRITICAL,HIGH \
+            --format sarif \
+            --output trivy-results-${{ inputs.environment }}.sarif \
+            --ignorefile plans/.trivyignore
 
       - name: Upload Trivy SARIF results
         uses: github/codeql-action/upload-sarif@v4
