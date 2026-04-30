@@ -79,7 +79,7 @@ module "vpc" {
     }
   ]
 
-  manage_default_security_group = true
+  manage_default_security_group  = true
   default_security_group_ingress = [] # Deny all ingress to default SG
   default_security_group_egress  = [] # Deny all egress from default SG
 }
