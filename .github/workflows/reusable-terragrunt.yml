@@ -113,10 +113,10 @@ jobs:
       - name: "Trivy Security Scan (Plan)"
         run: |
           echo "📊 Printing Table Report for Debugging..."
-          trivy config plans/ --severity CRITICAL,HIGH --ignorefile plans/.trivyignore --format table
+          trivy config plans/tfplan.json --severity CRITICAL,HIGH --ignorefile plans/.trivyignore --format table
           
           echo "📡 Generating SARIF for GitHub Security Tab..."
-          trivy config plans/ \
+          trivy config plans/tfplan.json \
             --severity CRITICAL,HIGH \
             --format sarif \
             --output trivy-results-${{ inputs.environment }}.sarif \

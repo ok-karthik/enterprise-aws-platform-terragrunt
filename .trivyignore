@@ -5,15 +5,18 @@
 # Justification: EKS Nodes require outbound access to reach public container registries (ECR, DockerHub) 
 # and AWS APIs. In a future iteration, this will be hardened using VPC Endpoints and a private registry.
 # --- Infrastructure / Network ---
-AWS-0104 # Unrestricted egress - Required for pulling images/updates during node bootstrap
+AVD-AWS-0104 # Unrestricted egress - Required for node bootstrap
+AWS-0104     # (Legacy ID) Unrestricted egress
 
 # --- Toolchain / Docker ---
-DS-0002 # Root user - Required for GitHub Actions runner compatibility and workspace permissions
-DS-0026 # Healthcheck - Not applicable for CLI toolchains (non-daemon containers)
+DS-0002 # Root user - Required for runner compatibility
+DS-0026 # Healthcheck - Not applicable for CLI containers
+DS-0010 # apt-get recommends - Toolchain optimization
 
 # --- Global / Upstream Noise ---
-AVD-AWS-0105 # NACL allows all ports - Default behavior in terraform-aws-modules/vpc
-AVD-AWS-0040 # EKS public access - Business requirement for Dev/Learning environment
-AVD-AWS-0038 # EKS public endpoint - Business requirement for Dev/Learning environment
-AVD-AWS-0088 # S3 Encryption - Learning environment (using default encryption for simplicity)
-DS-0010     # apt-get recommends - Toolchain optimization (not critical for CI container)
+AVD-AWS-0105 # NACL allows all ports - Default module behavior
+AVD-AWS-0040 # EKS public access - Dev environment requirement
+AVD-AWS-0041 # EKS public CIDR - Dev environment requirement
+AVD-AWS-0038 # EKS public endpoint - Dev environment requirement
+AVD-AWS-0039 # EKS encryption - Learning environment simplification
+AVD-AWS-0088 # S3 Encryption - Learning environment simplification
