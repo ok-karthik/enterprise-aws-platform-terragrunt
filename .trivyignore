@@ -15,3 +15,5 @@ DS-0026 # Healthcheck - Not applicable for CLI toolchains (non-daemon containers
 AVD-AWS-0105 # NACL allows all ports - Default behavior in terraform-aws-modules/vpc
 AVD-AWS-0040 # EKS public access - Business requirement for Dev/Learning environment
 AVD-AWS-0038 # EKS public endpoint - Business requirement for Dev/Learning environment
+AVD-AWS-0088 # S3 Encryption - Learning environment (using default encryption for simplicity)
+DS-0010     # apt-get recommends - Toolchain optimization (not critical for CI container)
