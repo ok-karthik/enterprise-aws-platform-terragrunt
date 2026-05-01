@@ -9,7 +9,6 @@
   ],
   "description": "Enterprise-grade Renovate config for Terragrunt/Terraform infrastructure",
   "dependencyDashboard": true,
-  "onboarding": false,
   "prCreation": "not-pending",
   "customManagers": [
     {
@@ -17,32 +16,30 @@
       "description": "Track tool versions in GitHub Actions inputs",
       "fileMatch": ["^\\.github/actions/.+/action\\.yml$"],
       "matchStrings": [
-        "default: '(?<currentValue>.*)'\\s+# renovate: datasource=(?<datasource>.*) depName=(?<depName>.*)( versioning=(?<versioning>.*))?"
-      ],
-      "versioningTemplate": "{{#if versioning}}{{versioning}}{{else}}semver{{/if}}"
+        "default: '(?<currentValue>[^']*)'\\s+# renovate: datasource=(?<datasource>\\S+) depName=(?<depName>\\S+)(?: versioning=(?<versioning>\\S+))?"
+      ]
     },
     {
       "customType": "regex",
       "description": "Track tool versions in Dockerfile ARGs",
       "fileMatch": ["(^|/)Dockerfile$"],
       "matchStrings": [
-        "ARG\\s+(?<depNameUppercase>.*?)_VERSION=(?<currentValue>.*)\\s+# renovate: datasource=(?<datasource>.*) depName=(?<depName>.*)(?: versioning=(?<versioning>.*))?"
-      ],
-      "versioningTemplate": "{{#if versioning}}{{versioning}}{{else}}semver{{/if}}"
+        "ARG\\s+(?:.*?)_VERSION=(?<currentValue>.*)\\s+# renovate: datasource=(?<datasource>\\S+) depName=(?<depName>\\S+)(?: versioning=(?<versioning>\\S+))?"
+      ]
     },
     {
       "customType": "regex",
       "description": "Track Terragrunt registry modules (tfr:// protocol)",
       "fileMatch": ["\\.hcl$"],
       "matchStrings": [
-        "source\\s*=\\s*\"tfr://registry\\.terraform\\.io/(?<depName>.*?)(?://.*?)?\\?version=(?<currentValue>.*?)\""
+        "source\\s*=\\s*\"tfr://registry\\.terraform\\.io/(?<depName>[^\\?]+)(?://.*?)?\\?version=(?<currentValue>[^\"]+)\""
       ],
       "datasourceTemplate": "terraform-module"
     }
   ],
   "packageRules": [
     {
-      "matchManagers": ["terraform", "terragrunt"],
+      "matchManagers": ["terraform", "terragrunt", "custom.regex"],
       "matchUpdateTypes": ["minor", "patch"],
       "groupName": "Infrastructure Dependencies (Non-Major)"
     },
