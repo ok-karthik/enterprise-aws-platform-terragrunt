@@ -179,7 +179,25 @@ We use **Open Policy Agent (OPA)** via **Conftest** to enforce custom organizati
 
 ---
 
-## 🛡️ Infrastructure Hardening & Compliance
+## 🤖 Automated Dependency Management (Renovate)
+
+The platform is designed for **Zero-Touch Maintenance**. We use [RenovateBot](https://github.com/renovatebot/renovate) with custom regex managers to automatically track and update infrastructure dependencies across all `.hcl` files, GitHub Actions, and Dockerfiles.
+
+### 🛡️ Automated Lifecycle & Governance
+*   **Terragrunt Module Tracking**: Custom managers track `tfr://` registry versions for all infrastructure modules.
+*   **Security Toolchain**: Automatically keeps Trivy, TFLint, and Checkov up to date.
+*   **Non-Major Grouping**: Patch and minor updates are consolidated into single "Infrastructure Dependencies" PRs to reduce noise.
+
+<p align="center">
+  <img src=".github/assets/renovate-dashboard.png" width="280" alt="Renovate Dashboard">
+  <img src=".github/assets/renovate-automated-prs.png" width="280" alt="Automated PR List">
+  <img src=".github/assets/renovate-pr-details.png" width="280" alt="Detailed PR View">
+  <br>
+  <i>The Renovate lifecycle: Centralized dashboard, automated PR grouping, and high-fidelity PR details with release notes.</i>
+</p>
+
+---
+
 
 The platform has transitioned from a "Reporting" state to a **"Remediated at Source"** architecture. We enforce production-grade security defaults directly within the infrastructure modules to minimize the attack surface.
 

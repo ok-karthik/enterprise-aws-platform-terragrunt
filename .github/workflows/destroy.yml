@@ -52,7 +52,7 @@ jobs:
     if: github.event.inputs.confirm_destruction == 'DESTROY'
     runs-on: ubuntu-latest
     container:
-      image: ghcr.io/ok-karthik/infrastructure-toolchain:feature-improvements
+      image: ghcr.io/ok-karthik/infrastructure-toolchain:latest
       credentials:
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
