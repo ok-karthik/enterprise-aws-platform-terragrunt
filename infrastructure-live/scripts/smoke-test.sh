@@ -48,6 +48,8 @@ fi
 # 2. Dependency Graph Validation
 echo -e "\n2. Validating Terragrunt dependency graph (Dev)..."
 cd infrastructure-live/dev
+# We run init first to ensure local caches are updated with any new module versions from Renovate
+terragrunt run --all init --non-interactive
 if terragrunt run --all validate --non-interactive; then
     echo -e "${GREEN}✅ Dependency graph and variables are valid.${NC}"
 else

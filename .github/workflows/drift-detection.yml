@@ -14,15 +14,21 @@ env:
   AWS_REGION: ${{ vars.AWS_REGION }}
 
 jobs:
-  detect-drift-prod:
-    name: '🔍 Detect Drift: Prod'
+  detect-drift:
+    name: '🔍 Detect Drift: ${{ matrix.environment }}'
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        environment: [dev, prod]
+
     container:
-      image: ghcr.io/ok-karthik/infrastructure-toolchain:feature-improvements
+      image: ghcr.io/ok-karthik/infrastructure-toolchain:latest
       options: --user root
       credentials:
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
+
     timeout-minutes: 30
 
     steps:
@@ -33,27 +39,27 @@ jobs:
         uses: ./.github/actions/setup-platform
         with:
           aws_region: ${{ env.AWS_REGION }}
-          aws_role_arn: ${{ vars.AWS_PROD_ROLE_ARN }}
+          aws_role_arn: ${{ matrix.environment == 'prod' && vars.AWS_PROD_ROLE_ARN || vars.AWS_DEV_ROLE_ARN }}
 
       - name: "Check for Infrastructure Drift"
         id: plan
         # -detailed-exitcode returns 2 if there are changes (drift)
         run: |
           set +e
-          terragrunt run-all plan -detailed-exitcode --non-interactive
+          terragrunt run-all plan --terragrunt-non-interactive -- -detailed-exitcode
           exitcode=$?
           set -e
 
           if [ $exitcode -eq 2 ]; then
             echo "DRIFT_DETECTED=true" >> $GITHUB_ENV
-            echo "Drift detected in Production! Exit code 2."
+            echo "Drift detected in ${{ matrix.environment }}! Exit code 2."
           elif [ $exitcode -ne 0 ]; then
             echo "Error running plan. Exit code $exitcode"
             exit 1
           else
             echo "No drift detected. Infrastructure matches code."
           fi
-        working-directory: infrastructure-live/prod
+        working-directory: infrastructure-live/${{ matrix.environment }}
 
       - name: "Alert on Drift (Create GitHub Issue)"
         if: env.DRIFT_DETECTED == 'true'
@@ -63,7 +69,7 @@ jobs:
             github.rest.issues.create({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              title: "🚨 Infrastructure Drift Detected in Production!",
-              body: "The nightly drift detection workflow found that the live infrastructure in `prod` does not match the Terraform state/code.\n\nPlease review the [Action Logs](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}) to see the exact resources that have drifted and remediate immediately.",
-              labels: ["bug", "security", "drift"]
+              title: "🚨 Infrastructure Drift Detected: ${{ matrix.environment }}",
+              body: "The nightly drift detection workflow found that the live infrastructure in `${{ matrix.environment }}` does not match the Terraform state/code.\n\nPlease review the [Action Logs](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}) to see the exact resources that have drifted and remediate immediately.",
+              labels: ["bug", "security", "drift", "${{ matrix.environment }}"]
             })

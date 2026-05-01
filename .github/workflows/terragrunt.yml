@@ -31,7 +31,7 @@ jobs:
     name: '🔍 Static Analysis (TFLint/Checkov)'
     runs-on: ubuntu-latest
     container:
-      image: ghcr.io/ok-karthik/infrastructure-toolchain:feature-improvements
+      image: ghcr.io/ok-karthik/infrastructure-toolchain:latest
       options: --user root
       credentials:
         username: ${{ github.actor }}
@@ -93,7 +93,7 @@ jobs:
     needs: [dev-stack]
     runs-on: ubuntu-latest
     container:
-      image: ghcr.io/ok-karthik/infrastructure-toolchain:feature-improvements
+      image: ghcr.io/ok-karthik/infrastructure-toolchain:latest
       options: --user root
       credentials:
         username: ${{ github.actor }}
@@ -120,7 +120,7 @@ jobs:
     needs: [apply-dev, prod-stack]
     runs-on: ubuntu-latest
     container:
-      image: ghcr.io/ok-karthik/infrastructure-toolchain:feature-improvements
+      image: ghcr.io/ok-karthik/infrastructure-toolchain:latest
       options: --user root
       credentials:
         username: ${{ github.actor }}
