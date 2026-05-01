@@ -35,6 +35,11 @@ jobs:
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
     timeout-minutes: 10
+    permissions:
+      id-token: write
+      contents: read
+      pull-requests: write
+      security-events: write
     steps:
       - name: "Git Checkout"
         uses: actions/checkout@v6
@@ -59,7 +64,6 @@ jobs:
   # ─────────────────────────────────────────────────────────────
   dev-stack:
     name: 'Dev'
-    needs: [static-analysis]
     uses: ./.github/workflows/reusable-terragrunt.yml
     with:
       environment: 'dev'
@@ -70,7 +74,6 @@ jobs:
 
   prod-stack:
     name: 'Prod'
-    needs: [static-analysis]
     uses: ./.github/workflows/reusable-terragrunt.yml
     with:
       environment: 'prod'

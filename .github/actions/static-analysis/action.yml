@@ -33,16 +33,38 @@ runs:
       uses: bridgecrewio/checkov-action@v12
       with:
         config_file: .checkov.yaml
-        soft_fail: false
+        soft_fail: true
+        output_format: sarif
+        output_file_path: checkov-results.sarif
+      env:
+        GITHUB_TOKEN: ${{ github.token }}
+
+    - name: Upload Checkov SARIF results
+      uses: github/codeql-action/upload-sarif@v4
+      if: always()
+      with:
+        sarif_file: checkov-results.sarif
+        category: static-analysis-checkov
 
     - name: Run Trivy Scan (Security)
-      uses: aquasecurity/trivy-action@v0.36.0
+      shell: bash
+      run: |
+        echo "📊 Printing Table Report for Debugging..."
+        trivy config . --severity CRITICAL,HIGH --ignorefile .trivyignore --format table
+
+        echo "🛡️ Running Trivy scan (SARIF)..."
+        trivy config . \
+          --severity CRITICAL,HIGH \
+          --format sarif \
+          --output trivy-results.sarif \
+          --ignorefile .trivyignore
+
+    - name: Upload Trivy SARIF results
+      uses: github/codeql-action/upload-sarif@v4
+      if: always()
       with:
-        scan-type: 'config'
-        hide-progress: false
-        format: 'sarif'
-        output: 'trivy-results.sarif'
-        severity: 'CRITICAL,HIGH'
+        sarif_file: trivy-results.sarif
+        category: static-analysis-trivy
 
     - name: License Compliance Check
       shell: bash

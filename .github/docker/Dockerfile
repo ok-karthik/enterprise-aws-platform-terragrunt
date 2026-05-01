@@ -14,8 +14,8 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 # Define tool versions (Sync with renovate.json)
-ARG TERRAFORM_VERSION=1.10.5 # renovate: datasource=github-releases depName=hashicorp/terraform
-ARG TERRAGRUNT_VERSION=1.0.1 # renovate: datasource=github-releases depName=gruntwork-io/terragrunt
+ARG TERRAFORM_VERSION=1.14.3 # renovate: datasource=github-releases depName=hashicorp/terraform
+ARG TERRAGRUNT_VERSION=1.0.2 # renovate: datasource=github-releases depName=gruntwork-io/terragrunt
 ARG TFLINT_VERSION=0.55.0 # renovate: datasource=github-releases depName=terraform-linters/tflint
 ARG CONFTEST_VERSION=0.56.0 # renovate: datasource=github-releases depName=open-policy-agent/conftest
 ARG TF_SUMMARIZE_VERSION=0.3.10 # renovate: datasource=github-releases depName=dineshba/tf-summarize
@@ -69,7 +69,12 @@ RUN apt-get update && apt-get install -y \
     curl \
     unzip \
     libcrypt1 \
+    python3 \
+    python3-pip \
     && rm -rf /var/lib/apt/lists/*
+
+# Install Checkov
+RUN pip3 install --no-cache-dir checkov --break-system-packages
 
 # Copy binaries from builder
 COPY --from=builder /usr/local/bin/ /usr/local/bin/
@@ -82,7 +87,7 @@ RUN ARCH=$(uname -m) && \
     rm -rf awscliv2.zip ./aws
 
 # Create a non-root user for security
-# Note: We do NOT set 'USER platform' here because GitHub Actions 
+# Note: We do NOT set 'USER platform' here because GitHub Actions
 # requires root permissions to manage the workspace and temp directories.
 # The 'platform' user is still available for manual/local use.
 WORKDIR /workspace

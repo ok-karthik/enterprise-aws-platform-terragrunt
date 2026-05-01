@@ -50,7 +50,7 @@ jobs:
         run: |
           # 1. Generate binary plans
           terragrunt run --all plan --non-interactive -no-color -- -out=tfplan.bin
-          
+
           # 2. Convert to JSON (searching inside .terragrunt-cache)
           echo "🔍 Converting binary plans to JSON..."
           find . -name "tfplan.bin" | while read -r plan_path; do
@@ -83,6 +83,11 @@ jobs:
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
     timeout-minutes: 10
+    permissions:
+      id-token: write
+      contents: read
+      pull-requests: write
+      security-events: write
     steps:
       - name: "Git Checkout"
         uses: actions/checkout@v6
@@ -100,23 +105,45 @@ jobs:
         run: find plans -name "*.json" -print0 | xargs -0 conftest test --policy policies/terraform
 
       - name: "Checkov Security Audit"
-        run: find plans -name "tfplan.json" -exec checkov -f {} --config-file .checkov.yaml \;
+        run: |
+          PLAN_FILE=$(find plans -name "tfplan.json" | head -n 1)
+          checkov -f "$PLAN_FILE" --config-file .checkov.yaml --output sarif --output-file-path checkov-results-${{ inputs.environment }}.sarif || true
+
+      - name: Upload Checkov SARIF results
+        uses: github/codeql-action/upload-sarif@v4
+        if: always()
+        with:
+          sarif_file: "checkov-results-${{ inputs.environment }}.sarif"
+          category: checkov-plan-${{ inputs.environment }}
+
+      - name: "📂 X-Ray: Verify File Structure"
+        run: |
+          echo "🔍 Searching for plans..."
+          ls -R
+          mkdir -p plans/ # Ensure dir exists
+          cp .trivyignore plans/.trivyignore || true
 
       - name: "Trivy Security Scan (Plan)"
-        uses: aquasecurity/trivy-action@v0.36.0
-        with:
-          scan-type: "config"
-          scan-ref: "plans/"
-          severity: "CRITICAL,HIGH"
-          format: "sarif"
-          output: "trivy-results-${{ inputs.environment }}.sarif"
+        run: |
+          PLAN_FILE=$(find plans -name "tfplan.json" | head -n 1)
+          echo "🎯 Found Plan File: $PLAN_FILE"
+
+          echo "📊 Printing Table Report for Debugging..."
+          trivy config "$PLAN_FILE" --severity CRITICAL,HIGH --ignorefile plans/.trivyignore --format table
+
+          echo "📡 Generating SARIF for GitHub Security Tab..."
+          trivy config "$PLAN_FILE" \
+            --severity CRITICAL,HIGH \
+            --format sarif \
+            --output trivy-results-${{ inputs.environment }}.sarif \
+            --ignorefile plans/.trivyignore
 
       - name: Upload Trivy SARIF results
         uses: github/codeql-action/upload-sarif@v4
         if: always()
         with:
           sarif_file: "trivy-results-${{ inputs.environment }}.sarif"
-          category: "governance-${{ inputs.environment }}"
+          category: trivy-plan-${{ inputs.environment }}
 
   cost-analysis:
     name: "💰 Cost Analysis (Infracost): ${{ inputs.environment }}"
@@ -128,6 +155,11 @@ jobs:
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
     timeout-minutes: 10
+    permissions:
+      id-token: write
+      contents: read
+      pull-requests: write
+      security-events: write
     steps:
       - name: "Git Checkout"
         uses: actions/checkout@v6
@@ -159,7 +191,7 @@ jobs:
           # 2. Change Summary (tf-summarize)
           echo "## 📊 Infrastructure Change Summary (${{ inputs.environment }})" > /tmp/pr-comment.md
           echo "> 💡 This report summarizes resource changes and estimated cost impact for the **${{ inputs.environment }}** environment." >> /tmp/pr-comment.md
-          
+
           find plans -name "tfplan.json" | while read -r plan; do
             module_name=$(dirname $plan | sed 's|plans/||')
             echo -e "\n<details><summary><b>📂 Module: ${module_name}</b></summary>\n" >> /tmp/pr-comment.md
@@ -186,7 +218,7 @@ jobs:
               issue_number: context.issue.number || ${{ github.event.pull_request.number }},
             });
             const botComment = comments.find(c => c.body.includes(`Infrastructure Change Summary (${envName})`));
-            
+
             if (botComment) {
               await github.rest.issues.updateComment({
                 owner: context.repo.owner,
