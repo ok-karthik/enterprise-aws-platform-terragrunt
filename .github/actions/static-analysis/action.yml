@@ -49,15 +49,16 @@ runs:
     - name: Run Trivy Scan (Security)
       shell: bash
       run: |
-        echo "📊 Printing Table Report for Debugging..."
-        trivy config . --severity CRITICAL,HIGH --ignorefile .trivyignore --format table
-
         echo "🛡️ Running Trivy scan (SARIF)..."
         trivy config . \
           --severity CRITICAL,HIGH \
           --format sarif \
           --output trivy-results.sarif \
-          --ignorefile .trivyignore
+          --ignorefile .trivyignore \
+          --tf-exclude-downloaded-modules
+
+        echo "📊 Printing Table Report and enforcing security gate..."
+        trivy config . --severity CRITICAL,HIGH --ignorefile .trivyignore --format table --tf-exclude-downloaded-modules --exit-code 1
 
     - name: Upload Trivy SARIF results
       uses: github/codeql-action/upload-sarif@v4
