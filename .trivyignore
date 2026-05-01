@@ -19,6 +19,10 @@ AWS-0041
 AVD-AWS-0178
 AWS-0178
 
+# AVD-AWS-0039: Trivy plan scanning fails to evaluate dynamically generated KMS keys (known after apply).
+AVD-AWS-0039
+AWS-0039
+
 # --- Toolchain / Docker ---
 DS-0010      # apt-get recommends (non-critical optimization)
 AVD-DS-0010
