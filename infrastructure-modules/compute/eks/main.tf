@@ -71,4 +71,7 @@ module "eks" {
   encryption_config = {
     resources = ["secrets"]
   }
+
+  # --- SECURITY: Encrypt CloudWatch Log Group (Resolves CKV_AWS_158) ---
+  cloudwatch_log_group_kms_key_id = module.eks.kms_key_arn
 }
