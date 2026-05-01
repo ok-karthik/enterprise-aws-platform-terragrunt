@@ -44,6 +44,7 @@ runs:
       if: always()
       with:
         sarif_file: checkov-results.sarif
+        category: static-analysis-checkov
 
     - name: Run Trivy Scan (Security)
       shell: bash
@@ -63,6 +64,7 @@ runs:
       if: always()
       with:
         sarif_file: trivy-results.sarif
+        category: static-analysis-trivy
 
     - name: License Compliance Check
       shell: bash
