@@ -183,9 +183,9 @@ After planning, the pipeline validates the **Terraform plan JSON** (not just HCL
 The pipeline posts a full consolidated report to every PR:
 
 <p align="center">
-  <img src=".github/assets/pr-audit.png" width="850" alt="Automated PR audit report">
+  <img src=".github/assets/pr-audit.png" width="650" alt="Automated PR audit report">
   <br>
-  <i>Automated PR audit: cost impact, security findings, and resource changes in one view.</i>
+  <i>Real Infracost report posted to a PR — showing per-module cost breakdown for <code>compute/eks</code> and <code>network/vpc</code> across both environments.</i>
 </p>
 
 ---
