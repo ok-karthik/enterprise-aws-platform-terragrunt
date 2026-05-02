@@ -63,7 +63,7 @@ jobs:
 
       - name: "Alert on Drift (Create GitHub Issue)"
         if: env.DRIFT_DETECTED == 'true'
-        uses: actions/github-script@v7
+        uses: actions/github-script@v9
         with:
           script: |
             const env = '${{ matrix.environment }}';
