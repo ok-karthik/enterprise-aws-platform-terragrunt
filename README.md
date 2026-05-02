@@ -37,24 +37,29 @@ This platform follows a **Hierarchical Blueprint Pattern** using Terragrunt. It 
 ### 🗺️ High-Level Flow
 
 ```mermaid
-graph LR
-    Dev[Developer] -->|Git Push / PR| Git[GitHub Repo]
-    Git -->|Trigger| GHA[GitHub Actions]
+graph TD
+    Dev["👨‍💻 Developer"] -->|"git push / open PR"| Git["📦 GitHub Repository"]
+    Git -->|"webhook trigger"| GHA["⚙️ GitHub Actions"]
 
-    subgraph "Governance Gates"
-    GHA --> Static[Static Analysis]
-    GHA --> Plan[Terragrunt Plan]
-    Plan --> Cost[Infracost]
-    Plan --> OPA[OPA Policy]
+    subgraph CI ["🔒 CI Governance Gates — run in parallel"]
+        GHA --> SA["🔍 Static Analysis\nTFLint · Trivy · Checkov"]
+        GHA --> PD["📝 Plan: dev"]
+        GHA --> PP["📝 Plan: prod"]
+        PD --> GD["⚖️ OPA Policy: dev"]
+        PD --> CD["💰 Infracost: dev"]
+        PP --> GP["⚖️ OPA Policy: prod"]
+        PP --> CP["💰 Infracost: prod"]
     end
 
-    Cost & OPA & Static -->|Protected Merge| AWS[AWS Infrastructure]
+    SA & GD & CD -->|"all gates pass"| AD["🚀 Apply: dev"]
+    AD -->|"dev stable"| AP["🚀 Apply: prod 🔐 Manual Approval"]
+    SA & GP & CP -->|"all gates pass"| AP
 
-    subgraph "AWS Ecosystem"
-    AWS --> VPC["Network: VPC"]
-    AWS --> EKS["Compute: EKS"]
-    AWS --> S3["Storage: S3"]
-    AWS --> IAM["Identity: OIDC"]
+    AP --> AWS["☁️ AWS Infrastructure"]
+
+    subgraph Infra ["AWS Resources"]
+        AWS --> VPC["🌐 VPC"]
+        AWS --> EKS["☸️ EKS"]
     end
 ```
 
@@ -120,20 +125,19 @@ The platform's core is a sophisticated **multi-stage pipeline** managed via GitH
 
 ```mermaid
 graph LR
-    PR[PR Opened] --> SA[🔍 Static Analysis]
-    PR --> PD[📝 Plan: Dev]
-    PR --> PP[📝 Plan: Prod]
+    PR["🔀 PR / Push to main"] --> SA["🔍 Static Analysis\nTFLint · Trivy · Checkov"]
+    PR --> PD["📝 Plan: dev"]
+    PR --> PP["📝 Plan: prod"]
 
-    PD --> CD[💰 Cost: Dev]
-    PD --> GD[⚖️ Governance: Dev]
+    PD --> CD["💰 Infracost: dev"]
+    PD --> GD["⚖️ OPA Policy: dev"]
 
-    PP --> CP[💰 Cost: Prod]
-    PP --> GP[⚖️ Governance: Prod]
+    PP --> CP["💰 Infracost: prod"]
+    PP --> GP["⚖️ OPA Policy: prod"]
 
-    CD & GD --> AD[🚀 Apply: Dev]
-    CP & GP --> AP[🚀 Apply: Prod]
-
-    AD --> AP
+    SA & CD & GD -->|"all pass"| AD["🚀 Apply: dev"]
+    AD -->|"promote"| AP["🔐 Approve → 🚀 Apply: prod"]
+    SA & CP & GP -->|"all pass"| AP
 ```
 
 <p align="center">
